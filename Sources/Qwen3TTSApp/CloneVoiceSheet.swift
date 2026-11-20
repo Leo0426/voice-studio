@@ -29,13 +29,14 @@ struct CloneVoiceSheet: View {
                 Button("关闭") { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Button("保存并使用") { save() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(StudioPrimaryButton())
                     .disabled(!canSave)
             }
             .padding(.top, 16)
         }
         .padding(20)
         .frame(width: 460)
+        .studioWindow()
     }
 
     private var canSave: Bool {

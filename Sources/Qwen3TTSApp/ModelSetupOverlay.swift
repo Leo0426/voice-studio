@@ -10,7 +10,7 @@ struct ModelSetupOverlay: View {
         if manager.state != .ready {
             ZStack {
                 Rectangle()
-                    .fill(.regularMaterial)
+                    .fill(Studio.ink.opacity(0.92))
                     .ignoresSafeArea()
                 card
             }
@@ -39,7 +39,7 @@ struct ModelSetupOverlay: View {
         }
         .padding(28)
         .frame(width: 380)
-        .background(.background, in: RoundedRectangle(cornerRadius: 16))
+        .studioPanel(Studio.panel, radius: 14)
         .shadow(radius: 24, y: 8)
     }
 
@@ -63,7 +63,7 @@ struct ModelSetupOverlay: View {
                 }
             }
             Button("开始下载", action: onDownload)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(StudioPrimaryButton())
                 .controlSize(.large)
                 .disabled((manager.availableDiskBytes ?? .max) < MLXModelManager.approximateDownloadBytes)
         }
@@ -95,7 +95,7 @@ struct ModelSetupOverlay: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(4)
             Button("重试", action: onDownload)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(StudioPrimaryButton())
         }
     }
 

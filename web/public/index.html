@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101315">
+  <title>文字转语音 · Voice Studio</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/history.css">
+  <link rel="stylesheet" href="/player.css">
+  <link rel="stylesheet" href="/dialogs.css">
+  <script type="module" src="/workspace-session.js"></script>
+</head>
+<body class="session-pending">
+  <div id="session-screen"><p id="session-status" role="status">正在检查登录状态…</p><button type="button" class="secondary" id="session-retry" hidden>重试</button><noscript>请启用 JavaScript 以登录。</noscript></div>
+  <a class="skip" href="#main">跳至主要内容</a>
+  <header class="top"><div class="shell bar">
+    <a class="brand" href="#tts" aria-label="Voice Studio 首页"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span>Voice Studio</span></a>
+    <nav aria-label="工作台">
+      <a href="#tts" id="nav-tts" aria-current="page"><i class="nav-wave" aria-hidden="true"></i>文字转语音</a>
+      <a href="#stt" id="nav-stt"><i class="nav-lines" aria-hidden="true"></i>语音转文字</a>
+      <a href="/history.html">任务历史</a>
+    </nav>
+    <div class="bar-tools">
+      <span class="service-state" id="service-state" role="status">连接本机服务中</span>
+      <button id="workspace-voice" type="button" class="secondary key-settings" aria-haspopup="dialog" aria-controls="voice-enrollment" hidden>创建自定义声音</button>
+      <a class="workspace-account" id="workspace-account" href="/account.html">账号中心</a>
+    </div>
+  </div></header>
+  <dialog id="voice-enrollment" class="studio-dialog" aria-labelledby="enrollment-title">
+    <div class="dialog-head"><h2 id="enrollment-title" tabindex="-1" autofocus><span class="dialog-emblem" aria-hidden="true"><i class="dialog-wave-icon"></i></span>创建自定义音色</h2>
+      <button id="enrollment-close" type="button" class="dialog-close" aria-label="关闭创建音色">×</button>
+    </div>
+    <div class="dialog-body">
+      <div id="enrollment-availability-box" class="enrollment-availability" hidden>
+        <span id="enrollment-availability" role="status"></span>
+        <button id="enrollment-retry" class="text-button" type="button" hidden>重试</button>
+      </div>
+      <div id="enrollment-editor">
+        <ol id="enrollment-progress" class="enrollment-progress" aria-label="创建进度">
+          <li id="enrollment-progress-consent" aria-current="step"><span aria-hidden="true">1</span>声音授权</li>
+          <li id="enrollment-progress-sample"><span aria-hidden="true">2</span>声音样本</li>
+        </ol>
+        <label for="enrollment-name">音色名称</label>
+        <input id="enrollment-name" maxlength="256" autocomplete="off" placeholder="例如，我的旁白">
+        <section id="enrollment-step-consent" class="enrollment-step" aria-label="声音授权">
+          <fieldset class="consent-modes"><legend>授权方式</legend><div>
+            <label><input type="radio" name="consent-mode" value="upload" checked>上传本人授权</label>
+            <label><input type="radio" name="consent-mode" value="existing">已有授权 ID</label>
+          </div></fieldset>
+          <div id="enrollment-upload-panel">
+            <div class="phrase-head"><label for="enrollment-language">本人朗读声明</label>
+              <select id="enrollment-language" aria-label="声明语言"><option value="zh">中文</option><option value="en">English</option></select>
+            </div>
+            <blockquote id="enrollment-phrase"></blockquote>
+            <label for="enrollment-recording">授权录音</label>
+            <div class="enrollment-file">
+              <input id="enrollment-recording" type="file" aria-describedby="enrollment-recording-help" accept=".wav,.mp3,.mpeg,.ogg,.aac,.flac,.webm,.m4a,.mp4">
+              <span aria-hidden="true">选择文件</span><span id="enrollment-recording-filename" aria-hidden="true">未选择文件</span>
+            </div>
+            <p class="dialog-note" id="enrollment-recording-help">只需朗读上方声明。每段录音最大 10 MiB。</p>
+          </div>
+          <div id="enrollment-existing-panel" hidden>
+            <label for="enrollment-consent">授权 ID</label>
+            <input id="enrollment-consent" maxlength="205" placeholder="cons_…" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="enrollment-consent-help">
+            <p class="dialog-note" id="enrollment-consent-help">使用同一 OpenAI 项目中、由样本说话人授予的授权 ID。</p>
+          </div>
+        </section>
+        <section id="enrollment-step-sample" class="enrollment-step" aria-labelledby="enrollment-sample-title" hidden>
+          <h3 id="enrollment-sample-title" tabindex="-1">上传声音样本</h3>
+          <p class="dialog-note">选择同一位说话人朗读完整句子的录音，建议 10–60 秒，至少含 5 秒人声。文件最大 10 MiB。</p>
+          <div class="consent-summary"><span>授权 ID</span><code id="enrollment-active-id"></code></div>
+          <label for="enrollment-sample">声音样本</label>
+          <div class="enrollment-file">
+            <input id="enrollment-sample" type="file" accept=".wav,.mp3,.mpeg,.ogg,.aac,.flac,.webm,.m4a,.mp4">
+            <span aria-hidden="true">选择文件</span><span id="enrollment-sample-filename" aria-hidden="true">未选择文件</span>
+          </div>
+        </section>
+        <p id="enrollment-requirement" class="dialog-note">创建音色需要 <a href="https://platform.openai.com/audio/voices" target="_blank" rel="noopener noreferrer">OpenAI 项目音色权限<span aria-hidden="true"> ↗</span></a>。</p>
+      </div>
+      <section id="enrollment-result" hidden aria-labelledby="enrollment-result-title">
+        <div class="result-symbol" aria-hidden="true">✓</div>
+        <h3 id="enrollment-result-title" tabindex="-1">音色已创建</h3>
+        <p id="enrollment-result-name" class="dialog-note"></p>
+        <label for="enrollment-id">音色 ID</label>
+        <div class="result-id"><input id="enrollment-id" readonly>
+          <button id="enrollment-copy" class="secondary" type="button">复制</button>
+        </div>
+      </section>
+      <p id="enrollment-status" class="dialog-status" role="status"></p>
+    </div>
+    <div class="dialog-foot">
+      <button id="enrollment-back" type="button" class="secondary" hidden>上一步</button>
+      <button id="enrollment-upload" type="button" class="primary" disabled>上传授权并继续</button>
+      <button id="enrollment-next" type="button" class="primary" hidden>继续选择样本</button>
+      <button id="enrollment-create" type="button" class="primary" hidden>创建音色</button>
+      <button id="enrollment-new" type="button" class="secondary" hidden>创建另一个</button>
+      <button id="enrollment-use" type="button" class="primary" hidden>用于朗读</button>
+    </div>
+  </dialog>
+  <main class="shell" id="main" tabindex="-1">
+    <p id="workspace-notice" role="status" hidden></p>
+    <section id="tts-view" aria-labelledby="tts-heading">
+      <div class="heading">
+        <div class="heading-copy"><h1 id="tts-heading">文字转语音</h1>
+          <p id="tts-description">选好音色，在本机朗读文字，试听或下载音频。</p>
+        </div>
+      </div>
+      <div class="workspace">
+        <form class="card editor" id="synthesis-form" autocomplete="off">
+          <div class="card-head">
+            <h2><span class="tile type-symbol" aria-hidden="true">Aa</span><label for="synthesis-text">朗读文本</label></h2>
+            <button id="sample-text" class="utility" type="button">填入示例</button>
+          </div>
+          <div class="writing-area">
+            <textarea id="synthesis-text" placeholder="在这里输入或粘贴要朗读的文字…" rows="5" required aria-describedby="text-count"></textarea>
+          </div>
+          <div class="actions compose-actions">
+            <span class="count" id="text-count">0 / 800 字</span>
+            <span class="shortcut" id="synthesis-shortcut" aria-hidden="true"></span>
+            <button id="cancel-synthesis" class="secondary" type="button" hidden>取消</button>
+            <button id="synthesize" class="primary" type="submit" disabled><i class="play-icon" aria-hidden="true"></i><span>生成语音</span></button>
+          </div>
+          <p class="message" id="synthesis-status" role="status"></p>
+          <div class="hint" id="synthesis-setup" hidden><span></span></div>
+        </form>
+        <details class="card settings-card" id="tts-settings" open>
+          <summary class="settings-head"><h2 id="synthesis-settings-title"><span class="tile" aria-hidden="true"><i class="sliders-symbol"></i></span>声音设置</h2><span class="settings-snapshot" id="tts-snapshot">本机 · Qwen</span><i class="chevron" aria-hidden="true"></i></summary>
+          <div class="settings-body">
+            <fieldset class="engine-switch" id="tts-provider" aria-describedby="tts-description">
+              <legend>合成引擎</legend>
+              <div class="engine-choices">
+                <label><input type="radio" name="tts-engine" value="local" checked><span><i class="device-symbol" aria-hidden="true"></i><strong>Qwen</strong><small>本机</small></span></label>
+                <label><input type="radio" name="tts-engine" value="openai"><span><i class="cloud-symbol" aria-hidden="true"></i><strong>OpenAI</strong><small>云端</small></span></label>
+              </div>
+            </fieldset>
+            <div class="local-settings" id="local-voice-field">
+              <label class="field">音色<select id="qwen-voice" disabled><option>读取中…</option></select></label>
+              <dl class="specs"><div><dt>模型</dt><dd>Qwen3-TTS</dd></div><div><dt>音频格式</dt><dd>WAV</dd></div></dl>
+            </div>
+            <fieldset id="openai-tts-options" class="cloud-options" aria-label="OpenAI 语音设置" hidden disabled>
+              <div class="field-grid">
+                <label class="wide">合成模型<select id="speech-model"></select></label>
+                <label>音色<select id="speech-voice"></select></label>
+                <label>音频格式<select id="speech-format"></select></label>
+                <label class="wide" id="custom-voice-field" hidden>已授权的声音 ID
+                  <input id="custom-voice-id" placeholder="voice_…" maxlength="126" autocomplete="off" spellcheck="false" disabled>
+                </label>
+              </div>
+              <div class="voice-demo" id="voice-demo" hidden>
+                <button type="button" id="voice-demo-toggle" class="secondary"><i class="play-icon" aria-hidden="true"></i><span>试听音色</span></button>
+                <small id="voice-demo-source">中文示例 · OpenAI AI 生成</small>
+                <span id="voice-demo-status" role="status"></span>
+                <audio id="voice-demo-audio" preload="none" hidden></audio>
+              </div>
+              <button type="button" id="create-custom-voice" class="text-button create-voice">创建自定义声音</button>
+              <details class="advanced">
+                <summary>风格、情感、语速与口音</summary>
+                <div class="field-grid">
+                  <label>风格<input id="speech-style" list="style-presets" maxlength="80" placeholder="例如，故事讲述"></label>
+                  <label>情感<input id="speech-emotion" list="emotion-presets" maxlength="80" placeholder="例如，温暖"></label>
+                  <label id="pace-field">语速<input id="speech-pace" list="pace-presets" maxlength="80" placeholder="例如，舒缓"></label>
+                  <label id="speed-field" hidden>语速倍率<input id="speech-speed" type="number" min="0.25" max="4" step="any" value="1" disabled><small>0.25 至 4，正常语速为 1。</small></label>
+                  <label>口音<input id="speech-accent" list="accent-presets" maxlength="80" placeholder="例如，标准普通话"></label>
+                  <label class="wide">额外朗读指导<textarea id="speech-instructions" rows="2" maxlength="1000" placeholder="例如，用偏低、柔和的声音朗读，在每段末尾稍作停顿。"></textarea></label>
+                </div>
+                <datalist id="style-presets"><option>自然</option><option>新闻播报</option><option>故事讲述</option><option>对话</option><option>纪录片</option></datalist>
+                <datalist id="emotion-presets"><option>平静</option><option>愉快</option><option>温暖</option><option>严肃</option><option>兴奋</option></datalist>
+                <datalist id="pace-presets"><option>舒缓</option><option>适中</option><option>明快</option></datalist>
+                <datalist id="accent-presets"><option>标准普通话</option><option>美式英语</option><option>英式英语</option><option>粤语</option></datalist>
+              </details>
+              <p class="message error" id="speech-options-error" role="status"></p>
+            </fieldset>
+          </div>
+        </details>
+        <section class="card output audio-output" aria-labelledby="audio-heading">
+          <header class="output-head">
+            <h2 id="audio-heading"><i class="monitor-icon" aria-hidden="true"></i>音频试听</h2>
+            <div class="player-readout"><span class="player-format" id="output-format">WAV</span><span class="player-clock" aria-hidden="true"><span id="player-time">–:––</span><span class="player-slash"> / </span><span id="player-duration">–:––</span></span></div>
+          </header>
+          <div class="player-transport">
+            <button type="button" class="player-toggle" id="player-toggle" aria-label="播放音频" title="播放音频" disabled><span class="player-icon" aria-hidden="true"></span></button>
+            <div class="player-display" id="player-display">
+              <div class="player-track" id="player-track">
+                <canvas class="player-wave" id="wave" aria-hidden="true"></canvas>
+                <canvas class="player-wave player-wave-played" id="wave-played" aria-hidden="true"></canvas>
+                <div class="player-cursor" aria-hidden="true"></div>
+                <input type="range" id="player-seek" min="0" max="1" step="0.01" value="0" aria-label="音频播放位置" title="拖动或用左右方向键调整播放位置" disabled>
+                <p class="player-empty" id="audio-empty">生成后即可试听音频</p>
+              </div>
+              <div class="player-ruler" id="player-ruler" aria-hidden="true" hidden></div>
+            </div>
+          </div>
+          <audio id="qwen-audio" preload="metadata" hidden></audio>
+          <div class="player-file" id="audio-result" hidden>
+            <p class="player-note" id="audio-origin"></p>
+            <a class="player-download" id="download-audio" download="voice-studio.wav"><i class="export-icon" aria-hidden="true">↓</i><span id="download-title">下载 WAV 音频</span></a>
+          </div>
+          <p class="player-notice" id="player-notice" role="status"></p>
+        </section>
+      </div>
+      <section id="tts-history" class="task-history module-history" aria-label="文字转语音任务历史"></section>
+    </section>
+    <section id="stt-view" aria-labelledby="stt-heading" hidden>
+      <div class="heading">
+        <div class="heading-copy"><h1 id="stt-heading">语音转文字</h1>
+          <p id="stt-description">上传音频或直接录音，在本机转成文字。</p>
+        </div>
+      </div>
+      <div class="workspace">
+        <section class="card editor" aria-labelledby="source-heading">
+          <div class="card-head"><h2 id="source-heading"><span class="tile" aria-hidden="true"><i class="nav-wave"></i></span>音频来源</h2></div>
+          <button class="dropzone" id="choose-file" type="button">
+            <span class="upload-icon" aria-hidden="true"><i></i></span>
+            <strong id="file-title">选择或拖入音频文件</strong>
+            <span id="file-info">WAV、MP3、M4A、AIFF 等 · 最大 50 MiB</span>
+          </button>
+          <input id="audio-file" type="file" accept=".wav,.wave,.mp3,.m4a,.mp4,.aif,.aiff,.aifc,.caf,.aac,.flac" hidden>
+          <div class="actions recording-actions">
+            <button type="button" class="secondary" id="record" disabled><i class="record-icon" aria-hidden="true"></i><span>使用麦克风录音</span></button>
+            <button type="button" class="text-button" id="cancel-record" hidden>取消录音</button>
+            <button type="button" class="primary" id="transcribe" disabled>开始转写</button>
+          </div>
+          <p class="message" id="transcription-status" role="status"></p>
+          <div class="hint" id="transcription-setup" hidden><span></span></div>
+        </section>
+        <details class="card settings-card" id="stt-settings" open>
+          <summary class="settings-head"><h2 id="recognition-settings-title"><span class="tile" aria-hidden="true"><i class="sliders-symbol"></i></span>转写设置</h2><span class="settings-snapshot" id="stt-snapshot">本机 · Whisper</span><i class="chevron" aria-hidden="true"></i></summary>
+          <div class="settings-body">
+            <fieldset class="engine-switch" id="stt-provider" aria-describedby="stt-description">
+              <legend>转写引擎</legend>
+              <div class="engine-choices">
+                <label><input type="radio" name="stt-engine" value="local" checked><span><i class="device-symbol" aria-hidden="true"></i><strong>Whisper</strong><small>本机</small></span></label>
+                <label><input type="radio" name="stt-engine" value="openai"><span><i class="cloud-symbol" aria-hidden="true"></i><strong>OpenAI</strong><small>云端</small></span></label>
+              </div>
+            </fieldset>
+            <div class="local-settings" id="local-language-field">
+              <label class="field">音频语言<select id="audio-language"><option value="zh">中文</option><option value="en" lang="en">English</option></select></label>
+              <dl class="specs"><div><dt>模型</dt><dd>Whisper</dd></div><div><dt>上传上限</dt><dd>50 MiB</dd></div></dl>
+            </div>
+            <fieldset id="openai-stt-options" class="cloud-options" aria-label="OpenAI 转写设置" hidden disabled>
+              <div class="field-grid">
+                <label>转写模型<input id="transcription-model" value="gpt-transcribe" readonly></label>
+                <label>音频语言<select id="cloud-languages">
+                  <option value="">自动检测</option><option value="zh">中文</option><option value="en">英语</option>
+                  <option value="zh,en">中英混合</option><option value="ja">日语</option><option value="ko">韩语</option>
+                  <option value="fr">法语</option><option value="es">西班牙语</option><option value="de">德语</option>
+                  <option value="custom">其他语言或组合…</option>
+                </select></label>
+                <label class="wide" id="language-codes-field" hidden>语言代码
+                  <input id="language-codes" placeholder="例如，zh-TW, en, ja" autocomplete="off" spellcheck="false" disabled>
+                  <small>多种语言用逗号分隔，最多 16 种。</small>
+                </label>
+              </div>
+              <details class="advanced">
+                <summary>转写提示与关键词</summary>
+                <div class="field-grid">
+                  <label class="wide">识别上下文<textarea id="transcription-prompt" autocomplete="off" rows="2" maxlength="1000" placeholder="例如，这是一段讨论机器学习的中文访谈。"></textarea></label>
+                  <label class="wide">关键词<textarea id="transcription-keywords" autocomplete="off" rows="2" placeholder="例如，Voice Studio，Qwen，Whisper"></textarea><small>输入人名、术语或专有名词，以逗号或换行分隔，最多 64 项。</small></label>
+                </div>
+              </details>
+              <p class="message error" id="transcription-options-error" role="status"></p>
+            </fieldset>
+          </div>
+        </details>
+        <section class="card output transcript-output" aria-labelledby="transcript-heading">
+          <header class="output-head">
+            <h2 id="transcript-heading"><i class="manuscript-icon" aria-hidden="true"></i>转写结果</h2>
+            <button type="button" class="copy" id="copy" disabled><i class="copy-icon" aria-hidden="true"></i>复制文字</button>
+          </header>
+          <div class="transcript-sheet">
+            <p id="transcript-empty">完成转写后，文字会显示在这里。</p>
+            <textarea id="transcript" aria-label="转写结果文本" rows="5" readonly hidden></textarea>
+          </div>
+          <p class="message" id="copy-status" role="status"></p>
+        </section>
+      </div>
+      <section id="stt-history" class="task-history module-history" aria-label="语音转文字任务历史"></section>
+    </section>
+    <section id="workspace-access" hidden><h1>转换权限</h1><p>当前账号尚未获授文字转语音或语音转文字权限。请联系管理员分配角色。</p><a href="/account.html">打开账号中心</a></section>
+  </main>
+  <noscript>请启用 JavaScript 以转换文字和语音。</noscript>
+</body>
+</html>

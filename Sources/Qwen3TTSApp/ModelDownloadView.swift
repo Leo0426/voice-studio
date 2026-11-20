@@ -13,6 +13,8 @@ struct ModelDownloadView: View {
             catalogSection
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Studio.ink)
         .frame(width: 520, height: 560)
     }
 
@@ -30,15 +32,17 @@ struct ModelDownloadView: View {
                     Button("更改…") { pickStorageDirectory() }
                     if !settings.modelStoragePath.isEmpty {
                         Button("恢复默认") {
-                            settings.modelStoragePath = ""
-                            model.applyStorageDirectory()
+                            model.deviceAccess.perform {
+                                settings.modelStoragePath = ""
+                                model.applyStorageDirectory()
+                            }
                         }
                     }
                 }
             }
             HStack {
                 Button {
-                    NSWorkspace.shared.activateFileViewerSelecting([currentStorageURL])
+                    model.deviceAccess.perform { NSWorkspace.shared.activateFileViewerSelecting([currentStorageURL]) }
                 } label: {
                     Label("在访达中显示", systemImage: "folder")
                 }
@@ -68,8 +72,10 @@ struct ModelDownloadView: View {
         panel.canCreateDirectories = true
         panel.prompt = "选择模型目录"
         if panel.runModal() == .OK, let url = panel.url {
-            settings.modelStoragePath = url.path
-            model.applyStorageDirectory()
+            model.deviceAccess.perform {
+                settings.modelStoragePath = url.path
+                model.applyStorageDirectory()
+            }
         }
     }
 
@@ -77,13 +83,13 @@ struct ModelDownloadView: View {
 
     private var sourceSection: some View {
         Section("下载源") {
-            Picker("下载源", selection: $settings.downloadSource) {
+            Picker("下载源", selection: model.deviceAccess.binding($settings.downloadSource)) {
                 ForEach(AppSettings.DownloadSource.allCases, id: \.self) { source in
                     Text(source.label).tag(source)
                 }
             }
             if settings.downloadSource == .custom {
-                TextField("https://your-mirror.example.com", text: $settings.customEndpoint)
+                TextField("https://your-mirror.example.com", text: model.deviceAccess.binding($settings.customEndpoint))
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
             }
@@ -98,13 +104,14 @@ struct ModelDownloadView: View {
     private var catalogSection: some View {
         Section("模型库") {
             ForEach(ModelLibrary.catalog) { entry in
-                ModelCatalogRow(entry: entry, manager: model.modelLibrary.manager(for: entry.repo))
+                ModelCatalogRow(model: model, entry: entry, manager: model.modelLibrary.manager(for: entry.repo))
             }
         }
     }
 }
 
 private struct ModelCatalogRow: View {
+    let model: AppModel
     let entry: ModelLibrary.CatalogEntry
     let manager: MLXModelManager
     @State private var confirmingDelete = false
@@ -124,7 +131,7 @@ private struct ModelCatalogRow: View {
             "删除「\(entry.title)」？删除后需重新下载。",
             isPresented: $confirmingDelete
         ) {
-            Button("删除", role: .destructive) { manager.deleteModel() }
+            Button("删除", role: .destructive) { model.deviceAccess.perform { manager.deleteModel() } }
         }
     }
 
@@ -135,7 +142,7 @@ private struct ModelCatalogRow: View {
             ProgressView().controlSize(.small)
         case .needsDownload:
             Button("下载") {
-                Task { await manager.download() }
+                model.download(manager)
             }
         case .downloading(let fraction, let completed, let total):
             HStack(spacing: 8) {
@@ -171,7 +178,7 @@ private struct ModelCatalogRow: View {
                     .foregroundStyle(.red)
                     .help(message)
                 Button("重试") {
-                    Task { await manager.download() }
+                    model.download(manager)
                 }
             }
         }

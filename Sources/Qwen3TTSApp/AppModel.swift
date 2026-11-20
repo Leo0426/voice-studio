@@ -11,6 +11,29 @@ enum VoiceSelection: Hashable {
     case preset(String)
     case clone(UUID)
     case design(UUID)
+
+    /// 稳定字符串编码：选择持久化与对话历史的角色绑定共用
+    var encoded: String {
+        switch self {
+        case .preset(let id): return "preset:\(id)"
+        case .clone(let id): return "clone:\(id.uuidString)"
+        case .design(let id): return "design:\(id.uuidString)"
+        }
+    }
+
+    init?(encoded: String) {
+        if encoded.hasPrefix("preset:") {
+            self = .preset(String(encoded.dropFirst("preset:".count)))
+        } else if encoded.hasPrefix("clone:"),
+                  let uuid = UUID(uuidString: String(encoded.dropFirst("clone:".count))) {
+            self = .clone(uuid)
+        } else if encoded.hasPrefix("design:"),
+                  let uuid = UUID(uuidString: String(encoded.dropFirst("design:".count))) {
+            self = .design(uuid)
+        } else {
+            return nil
+        }
+    }
 }
 
 /// 引擎槽位：每种发声方式对应一个模型（CustomVoice / Base / VoiceDesign 变体）
@@ -46,6 +69,9 @@ enum ModelLoadState: Equatable {
 @MainActor
 @Observable
 final class AppModel {
+    let deviceAccess: DeviceAccess
+    var sheet: DeviceSheet?
+    @ObservationIgnored private var modelTasks: [UUID: Task<Void, Never>] = [:]
     var text: String = ""
     var voiceSelection: VoiceSelection = .preset(Voice.default.id) {
         didSet {
@@ -75,7 +101,10 @@ final class AppModel {
     private(set) var firstChunkLatency: TimeInterval?
 
     let player = StreamingAudioPlayer()
-    let history: HistoryStore
+    private let writeHistory: DeviceHistoryWriter
+    private(set) var savingHistory = false
+    private(set) var historyWarning: String?
+    private var pendingHistory: [UUID: (DeviceSynthesisTask, DeviceSynthesisResult)] = [:]
     let clonedVoices: ClonedVoiceStore
     let designedVoices: DesignedVoiceStore
     let modelLibrary: ModelLibrary
@@ -94,17 +123,19 @@ final class AppModel {
     private(set) var speakShortcutFailed = false
 
     init(
-        historyDirectory: URL? = nil,
+        deviceAccess: DeviceAccess,
+        writeHistory: @escaping DeviceHistoryWriter,
         voicesDirectory: URL? = nil,
         designsDirectory: URL? = nil,
         settings: AppSettings? = nil,
         defaults: UserDefaults = .standard,
         forceFakeEngine: Bool = false
     ) {
+        self.deviceAccess = deviceAccess
         let settings = settings ?? AppSettings()
         self.settings = settings
         self.defaults = defaults
-        history = HistoryStore(directory: historyDirectory)
+        self.writeHistory = writeHistory
         clonedVoices = ClonedVoiceStore(directory: voicesDirectory)
         designedVoices = DesignedVoiceStore(directory: designsDirectory)
         modelLibrary = ModelLibrary(
@@ -128,6 +159,10 @@ final class AppModel {
 
     /// 按设置（重新）注册全局快捷键；旧注册先释放
     func applySpeakShortcut() {
+        deviceAccess.perform { self.authorizedApplySpeakShortcut() }
+    }
+
+    private func authorizedApplySpeakShortcut() {
         speakHotKey = nil
         speakShortcutFailed = false
         let shortcut = settings.speakShortcut
@@ -141,6 +176,36 @@ final class AppModel {
             }
         }
         speakShortcutFailed = speakHotKey == nil
+    }
+
+    func present(_ sheet: DeviceSheet) { deviceAccess.perform { self.sheet = sheet } }
+
+    func lockDevice() {
+        deviceAccess.invalidate()
+        speakHotKey = nil
+        cancelSynthesis()
+        player.stop()
+        for task in modelTasks.values { task.cancel() }
+        modelTasks.removeAll()
+        sheet = nil
+        text = ""
+        roleBindings.removeAll()
+        pendingHistory.removeAll()
+        historyWarning = nil
+    }
+
+    func download(_ manager: MLXModelManager) {
+        deviceAccess.perform { self.manageTask { await manager.download() } }
+    }
+
+    private func manageTask(_ operation: @escaping @MainActor () async -> Void) {
+        guard deviceAccess.active else { return }
+        let id = UUID()
+        modelTasks[id] = Task {
+            guard !Task.isCancelled else { return }
+            await operation()
+            modelTasks[id] = nil
+        }
     }
 
     // MARK: - 错误提示
@@ -163,6 +228,10 @@ final class AppModel {
 
     /// 开关语义：正在出声就停止，否则朗读剪贴板文本
     func toggleSpeakClipboard() {
+        deviceAccess.perform { self.authorizedToggleSpeakClipboard() }
+    }
+
+    private func authorizedToggleSpeakClipboard() {
         if isSpeaking {
             cancelSynthesis()
             player.stop()
@@ -210,6 +279,10 @@ final class AppModel {
     }
 
     func addClonedVoice(name: String, transcript: String, sourceAudioURL: URL) {
+        deviceAccess.perform { self.authorizedAddClonedVoice(name: name, transcript: transcript, sourceAudioURL: sourceAudioURL) }
+    }
+
+    private func authorizedAddClonedVoice(name: String, transcript: String, sourceAudioURL: URL) {
         do {
             let voice = try clonedVoices.add(name: name, transcript: transcript, sourceAudioURL: sourceAudioURL)
             voiceSelection = .clone(voice.id)
@@ -219,6 +292,10 @@ final class AppModel {
     }
 
     func deleteClonedVoice(_ voice: ClonedVoice) {
+        deviceAccess.perform { self.authorizedDeleteClonedVoice(voice) }
+    }
+
+    private func authorizedDeleteClonedVoice(_ voice: ClonedVoice) {
         clonedVoices.delete(voice)
         if case .clone(let id) = voiceSelection, id == voice.id {
             voiceSelection = .preset(Voice.default.id)
@@ -226,14 +303,131 @@ final class AppModel {
     }
 
     func addDesignedVoice(name: String, prompt: String) {
+        deviceAccess.perform { self.authorizedAddDesignedVoice(name: name, prompt: prompt) }
+    }
+
+    private func authorizedAddDesignedVoice(name: String, prompt: String) {
         let voice = designedVoices.add(name: name, prompt: prompt)
         voiceSelection = .design(voice.id)
     }
 
     func deleteDesignedVoice(_ voice: DesignedVoice) {
+        deviceAccess.perform { self.authorizedDeleteDesignedVoice(voice) }
+    }
+
+    private func authorizedDeleteDesignedVoice(_ voice: DesignedVoice) {
         designedVoices.delete(voice)
         if case .design(let id) = voiceSelection, id == voice.id {
             voiceSelection = .preset(Voice.default.id)
+        }
+    }
+
+    // MARK: - 对话模式（ADR-0002）
+
+    /// 当前文本解析出的台词段；无角色标记时为单段旁白（走现状单音色路径）
+    var dialogueLines: [DialogueLine] { DialogueScript.parse(text) }
+
+    /// 检测到的角色（按出现顺序去重）
+    var dialogueRoles: [String] {
+        var seen = Set<String>()
+        return dialogueLines.compactMap { line in
+            guard let role = line.role, seen.insert(role).inserted else { return nil }
+            return role
+        }
+    }
+
+    var isDialogue: Bool { !dialogueRoles.isEmpty }
+
+    /// 本场脚本的角色绑定（会话内）；持久化按角色名记忆，跨脚本复用
+    private var roleBindings: [String: VoiceSelection] = [:]
+
+    /// 角色的生效绑定：本场设置 > 按角色名记住的绑定 > 与预置音色同名的默认绑定
+    func binding(for role: String) -> VoiceSelection? {
+        if let bound = roleBindings[role], isValidSelection(bound) { return bound }
+        if let saved = defaults.string(forKey: "roleBinding:\(role)"),
+           let selection = VoiceSelection(encoded: saved), isValidSelection(selection) {
+            return selection
+        }
+        if let preset = Voice.presets.first(where: {
+            $0.id.caseInsensitiveCompare(role) == .orderedSame ||
+                $0.displayName.caseInsensitiveCompare(role) == .orderedSame
+        }) {
+            return .preset(preset.id)
+        }
+        return nil
+    }
+
+    func setBinding(_ selection: VoiceSelection, for role: String) {
+        deviceAccess.perform { self.authorizedSetBinding(selection, for: role) }
+    }
+
+    private func authorizedSetBinding(_ selection: VoiceSelection, for role: String) {
+        roleBindings[role] = selection
+        defaults.set(selection.encoded, forKey: "roleBinding:\(role)")
+        if let slot = dialogueSlot { ensureSlot(slot) }
+    }
+
+    /// 绑定指向的音色是否仍存在（克隆/设计音色可能已被删除）
+    private func isValidSelection(_ selection: VoiceSelection) -> Bool {
+        switch selection {
+        case .preset(let id): return Voice.presets.contains { $0.id == id }
+        case .clone(let id): return clonedVoices.items.contains { $0.id == id }
+        case .design(let id): return designedVoices.items.contains { $0.id == id }
+        }
+    }
+
+    private func slotKind(of selection: VoiceSelection) -> ModelSlotKind {
+        switch selection {
+        case .preset: return .preset
+        case .clone: return .clone
+        case .design: return .design
+        }
+    }
+
+    var dialogueUnboundRoles: [String] {
+        dialogueRoles.filter { binding(for: $0) == nil }
+    }
+
+    /// 有旁白段时旁白使用主音色，参与变体一致性校验
+    var dialogueHasNarration: Bool {
+        isDialogue && dialogueLines.contains { $0.role == nil }
+    }
+
+    /// 全场统一的模型槽位；混用变体时为 nil（ADR-0002 单变体边界）
+    var dialogueSlot: ModelSlotKind? {
+        var slots = Set(dialogueRoles.compactMap { binding(for: $0).map(slotKind(of:)) })
+        if dialogueHasNarration { slots.insert(slotKind(of: voiceSelection)) }
+        return slots.count == 1 ? slots.first : nil
+    }
+
+    /// 绑定面板的校验提示；nil 即可合成
+    var dialogueValidationMessage: String? {
+        guard isDialogue else { return nil }
+        let unbound = dialogueUnboundRoles
+        if !unbound.isEmpty {
+            return "未绑定音色：\(unbound.joined(separator: "、"))"
+        }
+        if dialogueSlot == nil {
+            return "一场对话只能使用同一类音色（预置 / 克隆 / 设计不可混用；旁白跟随主音色）"
+        }
+        return nil
+    }
+
+    /// 一个发声选择 → 对话角色的 RoleBinding；音色已被删除时返回 nil
+    private func makeRoleBinding(_ selection: VoiceSelection) -> RoleBinding? {
+        switch selection {
+        case .preset(let id):
+            guard let voice = Voice.presets.first(where: { $0.id == id }) else { return nil }
+            return RoleBinding(voice: voice, options: settings.makeSynthesisOptions(instruction: instruction))
+        case .clone(let id):
+            guard let cloned = clonedVoices.items.first(where: { $0.id == id }) else { return nil }
+            return RoleBinding(
+                voice: .default,
+                options: settings.makeSynthesisOptions(instruction: instruction, clone: clonedVoices.cloneReference(for: cloned))
+            )
+        case .design(let id):
+            guard let designed = designedVoices.items.first(where: { $0.id == id }) else { return nil }
+            return RoleBinding(voice: .default, options: settings.makeSynthesisOptions(instruction: "", design: designed.prompt))
         }
     }
 
@@ -282,26 +476,43 @@ final class AppModel {
     }
 
     func downloadModel() {
+        deviceAccess.perform { self.authorizedDownloadModel() }
+    }
+
+    private func authorizedDownloadModel() {
         guard let manager = modelManager else { return }
-        Task {
+        manageTask {
             await manager.download()
-            warmUpActiveEngineIfReady()
+            guard !Task.isCancelled else { return }
+            self.warmUpActiveEngineIfReady()
         }
     }
 
     /// 设置里切换模型规格后重建全部槽位；未下载时引导页自然出现
     func applyModelSelection() {
+        deviceAccess.perform { self.authorizedApplyModelSelection() }
+    }
+
+    private func authorizedApplyModelSelection() {
         guard !isFakeMode, mlxEngines[.preset]?.modelRepo != settings.modelRepo else { return }
         rebuildEngines()
     }
 
     /// 设置里改下载源后同步到全部管理器（对下一次下载生效）
     func applyDownloadSource() {
+        deviceAccess.perform { self.authorizedApplyDownloadSource() }
+    }
+
+    private func authorizedApplyDownloadSource() {
         modelLibrary.setDownloadHost(settings.resolvedDownloadHost)
     }
 
     /// 更改模型存储路径：管理器与引擎全部重建（不迁移已下载文件）
     func applyStorageDirectory() {
+        deviceAccess.perform { self.authorizedApplyStorageDirectory() }
+    }
+
+    private func authorizedApplyStorageDirectory() {
         guard !isFakeMode else { return }
         modelLibrary.setCacheDirectory(settings.resolvedStorageURL)
         rebuildEngines()
@@ -327,12 +538,17 @@ final class AppModel {
 
     /// 手动/自动把模型加载进内存
     func warmUpModel(_ kind: ModelSlotKind) {
+        deviceAccess.perform { self.authorizedWarmUpModel(kind) }
+    }
+
+    private func authorizedWarmUpModel(_ kind: ModelSlotKind) {
         guard let engine = mlxEngines[kind], managers[kind]?.state == .ready,
               loadState(kind) == .unloaded else { return }
         loadStates[kind] = .loading
-        Task { [weak self] in
+        manageTask { [weak self] in
             do {
                 try await engine.prepare()
+                try Task.checkCancellation()
                 self?.loadStates[kind] = .loaded
             } catch {
                 self?.loadStates[kind] = .unloaded
@@ -343,8 +559,12 @@ final class AppModel {
 
     /// 卸载模型释放内存；下次合成会重新加载
     func unloadModel(_ kind: ModelSlotKind) {
+        deviceAccess.perform { self.authorizedUnloadModel(kind) }
+    }
+
+    private func authorizedUnloadModel(_ kind: ModelSlotKind) {
         guard !isSynthesizing, let engine = mlxEngines[kind] else { return }
-        Task { [weak self] in
+        manageTask { [weak self] in
             await engine.unload()
             self?.loadStates[kind] = .unloaded
         }
@@ -358,7 +578,12 @@ final class AppModel {
 
     var canSynthesize: Bool {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !isSynthesizing, isModelReady else { return false }
+              !isSynthesizing, !savingHistory else { return false }
+        if isDialogue {
+            // 模型就绪在 synthesizeDialogue 里检查（未就绪给「去下载」提示）
+            return dialogueValidationMessage == nil
+        }
+        guard isModelReady else { return false }
         if usingClone, selectedClonedVoice == nil { return false }
         if usingDesign, selectedDesignedVoice == nil { return false }
         return true
@@ -369,7 +594,15 @@ final class AppModel {
     }
 
     func synthesize() {
+        deviceAccess.perform { self.authorizedSynthesize() }
+    }
+
+    private func authorizedSynthesize() {
         guard canSynthesize else { return }
+        if isDialogue {
+            synthesizeDialogue()
+            return
+        }
         let historyVoiceID: String
         switch voiceSelection {
         case .preset: historyVoiceID = selectedPresetVoice.id
@@ -390,10 +623,46 @@ final class AppModel {
         )
     }
 
+    /// 对话合成：解析出的台词段 + 角色绑定 → DialogueSynthesizer 编排
+    private func synthesizeDialogue() {
+        let lines = dialogueLines
+        var bindings: [String: RoleBinding] = [:]
+        for role in dialogueRoles {
+            guard let selection = binding(for: role), let roleBinding = makeRoleBinding(selection) else {
+                reportError("角色「\(role)」尚未绑定音色。")
+                return
+            }
+            bindings[role] = roleBinding
+        }
+        guard let slot = dialogueSlot else {
+            reportError("一场对话只能使用同一类音色（预置 / 克隆 / 设计不可混用）。")
+            return
+        }
+        // 旁白跟随主音色；主音色不可用（如克隆已删）时回落默认预置
+        let narrator = makeRoleBinding(voiceSelection)
+            ?? RoleBinding(voice: .default, options: settings.makeSynthesisOptions(instruction: instruction))
+        ensureSlot(slot)
+        if !isFakeMode, managers[slot]?.state != .ready {
+            reportError("对话使用的「\(slot.title)」尚未下载", needsDownloadCenter: true)
+            return
+        }
+        startSynthesis(
+            slot: slot,
+            historyText: text,
+            historyVoiceID: "对话 · \(dialogueRoles.count) 角色"
+        ) { engine in
+            DialogueSynthesizer(engine: engine).synthesize(lines: lines, bindings: bindings, narrator: narrator)
+        }
+    }
+
     /// 试听一段声音描述（语音设计面板用）：固定示例句，不进历史
     static let auditionSampleText = "你好，这就是用这段描述生成的声音。今天天气不错，适合出去走走。"
 
     func toggleAuditionDesign(prompt: String) {
+        deviceAccess.perform { self.authorizedToggleAuditionDesign(prompt: prompt) }
+    }
+
+    private func authorizedToggleAuditionDesign(prompt: String) {
         if isSpeaking {
             cancelSynthesis()
             player.stop()
@@ -416,13 +685,25 @@ final class AppModel {
         )
     }
 
-    /// 合成执行器：正式合成与试听共用同一条链路
+    /// 单音色合成（正式合成与试听共用）
     private func startSynthesis(
         text inputText: String,
         voice inputVoice: Voice,
         options: SynthesisOptions,
         slot: ModelSlotKind,
         historyVoiceID: String?
+    ) {
+        startSynthesis(slot: slot, historyText: inputText, historyVoiceID: historyVoiceID) { engine in
+            engine.synthesize(text: inputText, voice: inputVoice, options: options)
+        }
+    }
+
+    /// 合成执行器：单音色、试听与对话共用同一条流消费链路
+    private func startSynthesis(
+        slot: ModelSlotKind,
+        historyText: String?,
+        historyVoiceID: String?,
+        makeStream: @escaping (any InferenceEngine) -> AsyncThrowingStream<AudioChunk, Error>
     ) {
         let activeEngine: any InferenceEngine = fakeEngine
             ?? mlxEngines[slot].map { SegmentingEngine(base: $0) }
@@ -431,11 +712,15 @@ final class AppModel {
         firstChunkLatency = nil
         isSynthesizing = true
 
+        let entry = historyText.flatMap { text in historyVoiceID.map { DeviceSynthesisTask(text: text, voice: $0) } }
         synthesisTask = Task {
+            let result: DeviceSynthesisResult
             let started = ContinuousClock.now
             do {
+                try Task.checkCancellation()
                 try player.beginStreaming(sampleRate: 24_000)
-                for try await chunk in activeEngine.synthesize(text: inputText, voice: inputVoice, options: options) {
+                for try await chunk in makeStream(activeEngine) {
+                    try Task.checkCancellation()
                     if firstChunkLatency == nil {
                         firstChunkLatency = started.duration(to: .now).seconds
                         // 合成会隐式加载模型，同步到加载管理状态
@@ -443,15 +728,23 @@ final class AppModel {
                     }
                     player.enqueue(chunk)
                 }
+                try Task.checkCancellation()
                 player.endStreaming()
-                if let historyVoiceID {
-                    saveToHistory(text: inputText, voiceID: historyVoiceID)
-                }
+                result = .completed(samples: player.samples, rate: player.sampleRate)
             } catch is CancellationError {
                 player.endStreaming()
+                result = .cancelled
             } catch {
                 player.stop()
                 reportError(error.localizedDescription)
+                result = .failed
+            }
+            synthesisTask = nil
+            if let entry {
+                savingHistory = true
+                // 取消推理仍需提交取消状态，使用独立的写任务和起始账号的凭据。
+                await Task { await self.archive(entry, result) }.value
+                savingHistory = false
             }
             isSynthesizing = false
         }
@@ -464,54 +757,25 @@ final class AppModel {
 
     // MARK: - 播放与历史
 
-    func replay(_ item: StoredHistoryItem? = nil) {
-        do {
-            if let item {
-                let (samples, sampleRate) = try history.samples(for: item)
-                try player.beginStreaming(sampleRate: sampleRate)
-                player.enqueue(AudioChunk(samples: samples, sampleRate: sampleRate))
-                player.endStreaming()
-                text = item.text
-                if Voice.presets.contains(where: { $0.id == item.voiceID }) {
-                    voiceSelection = .preset(item.voiceID)
-                }
-            } else {
-                try player.replay()
-            }
-        } catch {
-            reportError(error.localizedDescription)
+    func replay() {
+        deviceAccess.perform {
+            do { try self.player.replay() } catch { self.reportError(error.localizedDescription) }
         }
-    }
-
-    func deleteHistory(_ item: StoredHistoryItem) {
-        history.delete(item)
     }
 
     // MARK: - 导出
 
     /// 导出当前播放器里的音频
     func exportCurrentAudio() {
-        guard !player.samples.isEmpty, let url = askSaveDestination() else { return }
-        do {
-            try writeAudio(samples: player.samples, sampleRate: player.sampleRate, to: url)
-        } catch {
-            reportError(error.localizedDescription)
+        deviceAccess.perform {
+            guard let url = self.askSaveDestination() else { return }
+            self.deviceAccess.perform { self.writeCurrentAudio(to: url) }
         }
     }
 
-    /// 导出历史条目（WAV 直接拷贝缓存文件，m4a 读回样本转码）
-    func exportHistory(_ item: StoredHistoryItem) {
-        guard let url = askSaveDestination() else { return }
+    private func writeCurrentAudio(to url: URL) {
         do {
-            if url.pathExtension.lowercased() == "m4a" {
-                let (samples, sampleRate) = try history.samples(for: item)
-                try M4AFile.write(samples: samples, sampleRate: sampleRate, to: url)
-            } else {
-                if FileManager.default.fileExists(atPath: url.path) {
-                    try FileManager.default.removeItem(at: url)
-                }
-                try FileManager.default.copyItem(at: history.audioURL(for: item), to: url)
-            }
+            try writeAudio(samples: player.samples, sampleRate: player.sampleRate, to: url)
         } catch {
             reportError(error.localizedDescription)
         }
@@ -538,45 +802,44 @@ final class AppModel {
         return panel.url
     }
 
-    private func saveToHistory(text: String, voiceID: String) {
-        guard !player.samples.isEmpty else { return }
+    private func archive(_ task: DeviceSynthesisTask, _ result: DeviceSynthesisResult) async {
         do {
-            let voice = Voice.presets.first { $0.id == voiceID }
-                ?? Voice(id: voiceID, displayName: voiceID, detail: "自定义")
-            try history.add(text: text, voice: voice, samples: player.samples, sampleRate: player.sampleRate)
+            try await writeHistory(task, result)
+            pendingHistory[task.id] = nil
+            if pendingHistory.isEmpty { historyWarning = nil }
         } catch {
-            reportError("历史记录保存失败：\(error.localizedDescription)")
+            guard deviceAccess.active else { return }
+            pendingHistory[task.id] = (task, result)
+            historyWarning = "任务历史保存失败：" + error.localizedDescription
+        }
+    }
+
+    func retrySavingHistory() {
+        deviceAccess.perform {
+            guard !self.isSynthesizing, !self.savingHistory, !self.pendingHistory.isEmpty else { return }
+            let entries = Array(self.pendingHistory.values)
+            self.savingHistory = true
+            Task {
+                for (task, result) in entries {
+                    guard self.deviceAccess.active else { break }
+                    await self.archive(task, result)
+                }
+                self.savingHistory = false
+            }
         }
     }
 
     // MARK: - 选择持久化
 
     private func persistVoiceSelection() {
-        let value: String
-        switch voiceSelection {
-        case .preset(let id): value = "preset:\(id)"
-        case .clone(let id): value = "clone:\(id.uuidString)"
-        case .design(let id): value = "design:\(id.uuidString)"
-        }
-        defaults.set(value, forKey: "lastVoiceSelection")
+        defaults.set(voiceSelection.encoded, forKey: "lastVoiceSelection")
     }
 
     private func restoreVoiceSelection() {
-        guard let saved = defaults.string(forKey: "lastVoiceSelection") else { return }
-        if saved.hasPrefix("preset:") {
-            let id = String(saved.dropFirst("preset:".count))
-            if Voice.presets.contains(where: { $0.id == id }) {
-                voiceSelection = .preset(id)
-            }
-        } else if saved.hasPrefix("clone:"),
-                  let uuid = UUID(uuidString: String(saved.dropFirst("clone:".count))),
-                  clonedVoices.items.contains(where: { $0.id == uuid }) {
-            voiceSelection = .clone(uuid)
-        } else if saved.hasPrefix("design:"),
-                  let uuid = UUID(uuidString: String(saved.dropFirst("design:".count))),
-                  designedVoices.items.contains(where: { $0.id == uuid }) {
-            voiceSelection = .design(uuid)
-        }
+        guard let saved = defaults.string(forKey: "lastVoiceSelection"),
+              let selection = VoiceSelection(encoded: saved),
+              isValidSelection(selection) else { return }
+        voiceSelection = selection
     }
 
     private static func fileTimestamp() -> String {

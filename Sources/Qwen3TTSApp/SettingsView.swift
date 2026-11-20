@@ -6,7 +6,6 @@ struct SettingsView: View {
     let model: AppModel
     @Bindable var settings: AppSettings
 
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Form {
@@ -18,12 +17,14 @@ struct SettingsView: View {
             shortcutSection
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Studio.ink)
         .frame(width: 460, height: 560)
     }
 
     private var loadManagementSection: some View {
         Section("加载管理") {
-            Toggle("模型就绪后自动加载进内存", isOn: $settings.autoWarmUp)
+            Toggle("模型就绪后自动加载进内存", isOn: model.deviceAccess.binding($settings.autoWarmUp))
             ForEach(model.activeSlots, id: \.self) { slot in
                 if let manager = model.slotManager(slot) {
                     loadRow(
@@ -71,7 +72,7 @@ struct SettingsView: View {
 
     private var modelSection: some View {
         Section("模型") {
-            Picker("模型规格", selection: $settings.modelRepo) {
+            Picker("模型规格", selection: model.deviceAccess.binding($settings.modelRepo)) {
                 ForEach(AppSettings.modelOptions) { option in
                     Text("\(option.label) — \(option.detail)").tag(option.repo)
                 }
@@ -82,7 +83,7 @@ struct SettingsView: View {
                     .foregroundStyle(.orange)
             }
             Button("打开模型下载中心…") {
-                openWindow(id: "model-downloads")
+                model.present(.downloads)
             }
             .buttonStyle(.link)
         }
@@ -90,7 +91,7 @@ struct SettingsView: View {
 
     private var languageSection: some View {
         Section("语言") {
-            Picker("合成语言", selection: $settings.language) {
+            Picker("合成语言", selection: model.deviceAccess.binding($settings.language)) {
                 ForEach(AppSettings.languageOptions, id: \.display) { option in
                     Text(option.display).tag(option.value)
                 }
@@ -103,13 +104,13 @@ struct SettingsView: View {
 
     private var samplingSection: some View {
         Section("生成") {
-            Toggle("自定义采样参数", isOn: $settings.useCustomSampling)
+            Toggle("自定义采样参数", isOn: model.deviceAccess.binding($settings.useCustomSampling))
             if settings.useCustomSampling {
                 LabeledContent("温度 \(settings.temperature, specifier: "%.2f")") {
-                    Slider(value: $settings.temperature, in: 0.1 ... 1.5)
+                    Slider(value: model.deviceAccess.binding($settings.temperature), in: 0.1 ... 1.5)
                 }
                 LabeledContent("Top-P \(settings.topP, specifier: "%.2f")") {
-                    Slider(value: $settings.topP, in: 0.5 ... 1.0)
+                    Slider(value: model.deviceAccess.binding($settings.topP), in: 0.5 ... 1.0)
                 }
                 Text("温度越低越稳定，越高越有表现力；模型默认 0.90 / 1.00。")
                     .font(.caption)
@@ -120,7 +121,7 @@ struct SettingsView: View {
 
     private var shortcutSection: some View {
         Section("快捷键") {
-            Picker("朗读剪贴板", selection: $settings.speakShortcutID) {
+            Picker("朗读剪贴板", selection: model.deviceAccess.binding($settings.speakShortcutID)) {
                 ForEach(AppSettings.shortcutOptions) { option in
                     Text(option.label).tag(option.id)
                 }
@@ -138,7 +139,7 @@ struct SettingsView: View {
 
     private var streamingSection: some View {
         Section("流式播放") {
-            Picker("分块策略", selection: $settings.streamingInterval) {
+            Picker("分块策略", selection: model.deviceAccess.binding($settings.streamingInterval)) {
                 ForEach(AppSettings.streamingOptions, id: \.value) { option in
                     Text(option.label).tag(option.value)
                 }

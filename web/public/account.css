@@ -1,0 +1,52 @@
+.account-bar,.account-actions,.panel-heading {display:flex;align-items:center;justify-content:space-between;gap:14px}
+.account-bar {min-height:68px}
+.account-actions a {font-size:14px;text-decoration:none}
+.account-main {padding-block:clamp(28px,6vw,70px) 50px}
+.account-loading,.account-login {max-width:425px;margin:clamp(16px,5vh,54px) auto;padding:clamp(20px,3vw,32px);background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+.account-login h1,.account-heading h1 {margin:0;letter-spacing:-.04em;font-size:clamp(26px,4vw,40px);line-height:1.25}
+.account-login>p,.account-heading p,.form-help,.account-page small {color:var(--muted)}
+.account-login>p,.account-heading p {margin-top:10px}
+.account-page form>label,.account-page #bootstrap-fields>label,.account-page #edit-fields>label {display:grid;gap:6px;margin-top:14px;font-size:14px}
+.account-page input:not([type=checkbox]) {width:100%;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--well);color:var(--ink)}
+.account-page h2 {font-size:18px}
+.account-page .primary,.account-page .secondary {min-height:37px;padding:7px 14px}
+.account-login .primary {width:100%;margin-top:15px}
+.form-help,.account-status,.account-page small {font-size:13px;line-height:1.6}
+.form-help {margin-top:9px}
+.account-status {color:var(--accent);overflow-wrap:anywhere}
+.account-status:not(:empty) {margin:12px 0}
+.account-status.error {color:#ffac9f}
+.account-center {max-width:980px;margin:auto}
+.account-heading p {overflow-wrap:anywhere}
+.account-tabs {display:flex;gap:22px;margin:22px 0 18px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.account-tabs a {padding:8px 0;color:var(--muted);font-size:14px;text-decoration:none}
+.account-tabs a[aria-current] {color:var(--accent);border-bottom:2px solid currentColor}
+.account-panel {padding:clamp(16px,3vw,26px);background:var(--card);border:1px solid var(--line);border-radius:var(--radius);min-width:0}
+.role-tags,.row-actions {display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.role-tags {margin:12px 0}
+.role-pill {display:inline-block;padding:3px 9px;color:#ead8bb;background:#2b2824;border:1px solid #4a4033;border-radius:5px;font-size:13px;overflow-wrap:anywhere}
+.my-access {margin-block:14px;font-size:14px;color:var(--muted)}
+.my-access ul {padding-left:22px}
+.profile-tools {display:flex;gap:18px;flex-wrap:wrap;margin:14px 0;font-size:14px}
+.divider-title {padding-top:18px;border-top:1px solid var(--line)}
+.password-form {max-width:420px}
+.password-form>.primary {margin-top:12px}
+.admin-table {overflow-x:auto;margin-top:15px}
+.admin-table table {width:100%;border-collapse:collapse;text-align:left;font-size:14px}
+.admin-table th {font-size:12px;color:var(--muted);font-weight:550}
+.admin-table td,.admin-table th {padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+.admin-table tr:last-child td {border-bottom:0}
+.admin-table .secondary {min-height:30px;padding:4px 9px;font-size:12px}
+.admin-table .danger-link {color:#ffb6a8}
+.admin-table .empty-row {color:var(--muted)}
+.account-page dialog {width:min(490px,calc(100vw - 28px));max-height:86vh;overflow:auto;padding:22px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+.account-page dialog::backdrop {background:#050606aa}
+.account-page dialog .account-actions {margin-top:20px;justify-content:flex-end}
+.account-page #edit-fields>p {margin-top:10px;color:var(--muted);overflow-wrap:anywhere}
+.account-page .choice-group {border:1px solid var(--line);border-radius:6px;margin-top:14px;padding:8px 12px}
+.choice-group legend {padding-inline:4px;font-size:14px}
+.choice-item {display:flex;align-items:center;gap:8px;min-height:31px;font-size:14px;overflow-wrap:anywhere}
+.choice-item input {accent-color:var(--accent)}
+.account-page .destructive {background:#e9a299;color:#261610}
+@media(max-width:620px){.account-bar{min-height:60px}.account-tabs{gap:15px}.account-main{width:calc(100% - 24px)}.admin-table td,.admin-table th{padding-inline:6px}.admin-table table{min-width:470px}.account-actions{gap:9px}.account-actions a{font-size:13px}.account-page .brand{font-size:19px}}
+.account-page #edit-fields>label.choice-item {display:flex;align-items:center;gap:8px}

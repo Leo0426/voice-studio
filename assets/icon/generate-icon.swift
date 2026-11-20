@@ -1,4 +1,4 @@
-// 生成应用图标：紫罗兰渐变圆角方形 + 白色声波
+// 生成应用图标：暖金色圆角方形和倾斜的墨色声波
 // 用法: swift assets/icon/generate-icon.swift（在仓库根目录运行）
 // 产物: assets/icon/AppIcon.iconset/*.png → 再由 iconutil 合成 AppIcon.icns
 import AppKit
@@ -6,8 +6,8 @@ import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
 
-// 声波柱高度（相对主体高度的比例），左右对称呼应语音波形
-let barHeights: [CGFloat] = [0.22, 0.40, 0.62, 0.88, 0.52, 0.74, 0.36, 0.58, 0.26]
+// 声波柱高度（相对主体高度的比例）
+let barHeights: [CGFloat] = [0.36, 0.74, 1.0, 0.63, 0.40]
 
 func drawIcon(canvas: CGFloat) -> CGImage {
     let scale = canvas / 1024.0
@@ -36,19 +36,19 @@ func drawIcon(canvas: CGFloat) -> CGImage {
         color: CGColor(red: 0, green: 0, blue: 0, alpha: 0.30)
     )
     context.addPath(bodyPath)
-    context.setFillColor(CGColor(red: 0.35, green: 0.25, blue: 0.75, alpha: 1))
+    context.setFillColor(CGColor(red: 0.64, green: 0.43, blue: 0.20, alpha: 1))
     context.fillPath()
     context.restoreGState()
 
-    // 渐变填充：violet-400 → violet-900
+    // 从香槟金过渡到琥珀色
     context.saveGState()
     context.addPath(bodyPath)
     context.clip()
     let gradient = CGGradient(
         colorsSpace: colorSpace,
         colors: [
-            CGColor(red: 0.655, green: 0.478, blue: 0.980, alpha: 1), // #A77AFA
-            CGColor(red: 0.306, green: 0.114, blue: 0.674, alpha: 1), // #4E1DAC
+            CGColor(red: 0.992, green: 0.835, blue: 0.592, alpha: 1),
+            CGColor(red: 0.864, green: 0.610, blue: 0.318, alpha: 1),
         ] as CFArray,
         locations: [0, 1]
     )!
@@ -75,13 +75,16 @@ func drawIcon(canvas: CGFloat) -> CGImage {
     )
     context.restoreGState()
 
-    // 白色声波柱（胶囊形，居中）
-    let barWidth = 46 * scale
-    let barGap = 32 * scale
+    // 墨色声波沿垂直中线倾斜。
+    let barWidth = 60 * scale
+    let barGap = 31 * scale
     let totalWidth = CGFloat(barHeights.count) * barWidth + CGFloat(barHeights.count - 1) * barGap
     var x = (canvas - totalWidth) / 2
     let maxBarHeight = bodySize * 0.52
-    context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.96))
+    context.translateBy(x: canvas / 2, y: canvas / 2)
+    context.concatenate(CGAffineTransform(a: 1, b: 0, c: 0.18, d: 1, tx: 0, ty: 0))
+    context.translateBy(x: -canvas / 2, y: -canvas / 2)
+    context.setFillColor(CGColor(red: 0.09, green: 0.10, blue: 0.10, alpha: 1))
     for height in barHeights {
         let barHeightPx = maxBarHeight * height
         let barRect = CGRect(

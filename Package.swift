@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "TTSCore", targets: ["TTSCore"]),
         .library(name: "TTSEngineMLX", targets: ["TTSEngineMLX"]),
         .executable(name: "Qwen3TTSApp", targets: ["Qwen3TTSApp"]),
+        .executable(name: "QwenTTSBridge", targets: ["QwenTTSBridge"]),
     ],
     dependencies: [
         .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", from: "0.1.3"),
@@ -17,6 +18,7 @@ let package = Package(
     targets: [
         // 无 MLX 依赖：UI 开发与测试的快速内循环（swift build / swift test 可用）
         .target(name: "TTSCore"),
+        .target(name: "OpenAISpeech"),
         // MLX 真实推理引擎：链接 MLX 的产物必须用 xcodebuild 构建（见 CLAUDE.md）
         .target(
             name: "TTSEngineMLX",
@@ -26,8 +28,18 @@ let package = Package(
                 .product(name: "HuggingFace", package: "swift-huggingface"),
             ]
         ),
-        .executableTarget(name: "Qwen3TTSApp", dependencies: ["TTSCore", "TTSEngineMLX"]),
+        .target(
+            name: "SpeechToText",
+            dependencies: [
+                .product(name: "MLXAudioSTT", package: "mlx-audio-swift"),
+                .product(name: "MLXAudioCore", package: "mlx-audio-swift"),
+                .product(name: "HuggingFace", package: "swift-huggingface"),
+            ]
+        ),
+        .executableTarget(name: "Qwen3TTSApp", dependencies: ["TTSCore", "TTSEngineMLX", "SpeechToText", "OpenAISpeech"]),
+        .executableTarget(name: "QwenTTSBridge", dependencies: ["TTSCore", "TTSEngineMLX", "SpeechToText"]),
         .testTarget(name: "TTSCoreTests", dependencies: ["TTSCore"]),
+        .testTarget(name: "OpenAISpeechTests", dependencies: ["OpenAISpeech"]),
         // AppModel 状态机测试：全程假引擎，不触发 MLX 推理（链接 MLX 但不加载 metallib）
         .testTarget(name: "AppModelTests", dependencies: ["Qwen3TTSApp"]),
     ],

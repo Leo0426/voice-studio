@@ -1,0 +1,145 @@
+.studio-dialog {
+  color-scheme: dark;
+  --paper: #101315;
+  --card: #191d20;
+  --raised: #202528;
+  --ink: #f1eee7;
+  --muted: #b0b2af;
+  --line: #3a4041;
+  --dialog-accent: #fac47a;
+  --dialog-highlight: #302b24;
+  --dialog-error: #ffaca2;
+  width: min(536px, calc(100% - 32px));
+  max-width: none;
+  max-height: min(90dvh, 790px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 26px 88px #000a, inset 0 1px #ffffff0e;
+}
+.studio-dialog::backdrop { background: rgb(6 8 9 / 76%); backdrop-filter: blur(3px); }
+.studio-dialog[open] { display: flex; flex-direction: column; min-height: 0; }
+.studio-dialog[open] { overflow: hidden; }
+.studio-dialog .dialog-head, .studio-dialog .dialog-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 26px;
+  background: var(--raised);
+}
+.studio-dialog .dialog-head { justify-content: space-between; border-bottom: 1px solid var(--line); }
+.studio-dialog .dialog-head h2 { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.025em; }
+.dialog-emblem { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #715635; border-radius: 8px; background: #322a20; color: var(--dialog-accent); }
+.dialog-key-icon { position: relative; width: 9px; height: 9px; border: 1.7px solid currentColor; border-radius: 50%; transform: translate(3px, -3px); }
+.dialog-key-icon::after { content: ""; position: absolute; top: 5px; right: 5px; width: 3px; height: 8px; border: solid currentColor; border-width: 0 0 2px 2px; transform-origin: top right; transform: rotate(40deg); }
+.dialog-wave-icon { width: 18px; height: 18px; background: linear-gradient(currentColor,currentColor) 0 center/2px 5px, linear-gradient(currentColor,currentColor) 4px center/2px 11px, linear-gradient(currentColor,currentColor) 8px center/2px 17px, linear-gradient(currentColor,currentColor) 12px center/2px 10px, linear-gradient(currentColor,currentColor) 16px center/2px 4px; background-repeat: no-repeat; }
+.studio-dialog .dialog-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 23px/1 system-ui, sans-serif;
+}
+.studio-dialog .dialog-close:hover { background: #303537; border-color: #626867; color: var(--ink); }
+.studio-dialog .dialog-body { padding: 22px 26px; min-width: 0; min-height: 0; overflow-y: auto; }
+.studio-dialog .dialog-foot { justify-content: flex-end; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.studio-dialog .dialog-foot .text-button { margin-right: auto; }
+.studio-dialog .primary, .studio-dialog .secondary { min-height: 42px; padding: 9px 16px; font-weight: 650; border-radius: 7px; }
+.studio-dialog .primary { color: #20190f; background: var(--dialog-accent); border: 1px solid #eab36a; box-shadow: inset 0 1px #ffe1a9; }
+.studio-dialog .primary:hover:enabled { background: #ffd197; border-color: #f6c488; color: #20190f; }
+.studio-dialog .primary:active:enabled { background: #eab267; box-shadow: none; }
+.studio-dialog .primary:disabled { opacity: 1; color: #b9b0a3; background: #3a352e; border-color: #4a443b; box-shadow: none; }
+.studio-dialog .secondary { color: var(--ink); background: var(--raised); border: 1px solid #555b5b; box-shadow: none; }
+.studio-dialog .secondary:hover:enabled { color: var(--ink); background: #2c3234; border-color: #757b7a; }
+.studio-dialog .text-button { color: var(--dialog-accent); }
+.studio-dialog :is(h2, h3)[tabindex="-1"]:focus { outline: none; }
+.studio-dialog :is(button, select, input, a):focus-visible { outline: 3px solid var(--dialog-accent); outline-offset: 3px; }
+.studio-dialog label, .studio-dialog legend { display: block; margin: 0 0 7px; font-size: 13px; font-weight: 650; color: var(--ink); }
+.studio-dialog input:not([type="radio"]), .studio-dialog select {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  height: 42px;
+  padding: 8px 11px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid #515758;
+  border-radius: 7px;
+  box-shadow: inset 0 1px 3px #0003;
+  font-size: 14px;
+}
+.studio-dialog input::placeholder { color: #989c9a; opacity: 1; }
+.studio-dialog input:disabled, .studio-dialog select:disabled { color: #a5a6a0; background: #1b1e20; }
+.studio-dialog input[aria-invalid="true"] { border-color: var(--dialog-error); }
+.studio-dialog .dialog-note, .studio-dialog .dialog-status, #key-source {
+  margin: 7px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.studio-dialog .dialog-note a { color: var(--dialog-accent); text-underline-offset: 3px; }
+.studio-dialog .dialog-status:not(:empty) { margin-top: 14px; color: var(--ink); }
+.studio-dialog .dialog-status.error { color: var(--dialog-error); }
+.studio-dialog .dialog-status:empty { margin: 0; }
+.studio-dialog .result-id { display: flex; align-items: stretch; gap: 8px; }
+.enrollment-progress {
+  display: flex; align-items: center; gap: 12px; padding: 0; margin: 0 0 20px; list-style: none;
+}
+.enrollment-progress li { display: flex; flex: none; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.enrollment-progress li:first-child { flex: 1; }
+.enrollment-progress li:first-child::after { content: ""; flex: 1; height: 1px; margin-left: 6px; background: var(--line); }
+.enrollment-progress li span { width: 24px; height: 24px; display: grid; place-items: center; background: var(--raised); border: 1px solid #515657; border-radius: 50%; font: 600 12px/1 "IBM Plex Mono", ui-monospace, monospace; }
+.enrollment-progress li[aria-current="step"] { color: var(--dialog-accent); }
+.enrollment-progress li[aria-current="step"] span { background: var(--dialog-accent); border-color: var(--dialog-accent); color: #211a10; }
+.enrollment-progress li.is-complete span { background: var(--dialog-highlight); border-color: #8c6a3f; color: var(--dialog-accent); }
+.studio-dialog .enrollment-step { margin-top: 17px; }
+.studio-dialog .enrollment-step h3 { margin: 0; font-size: 16px; }
+.consent-modes { min-width: 0; padding: 0; border: 0; margin: 0 0 18px; }
+.consent-modes > div { display: flex; padding: 3px; gap: 3px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+.studio-dialog .consent-modes label { flex: 1; position: relative; text-align: center; cursor: pointer; padding: 7px 3px; margin: 0; color: var(--muted); border: 1px solid transparent; border-radius: 5px; }
+.consent-modes input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.studio-dialog .consent-modes label:has(:checked) { background: var(--dialog-highlight); border-color: #69563b; color: var(--dialog-accent); }
+.consent-modes label:has(:focus-visible) { outline: 3px solid var(--dialog-accent); outline-offset: 2px; }
+.phrase-head { display:flex; align-items:center; justify-content:space-between; gap: 8px; }
+.studio-dialog .phrase-head label { margin: 0; }
+.studio-dialog .phrase-head select { width: auto; height: 34px; min-height: 34px; padding: 3px 20px 3px 8px; font-size: 13px; }
+.studio-dialog blockquote { margin: 7px 0 15px; padding: 10px 14px; background: #262622; border-left: 2px solid var(--dialog-accent); border-radius: 0 5px 5px 0; color: var(--ink); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.enrollment-file { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 4px 5px; background: var(--paper); border: 1px solid #515758; border-radius: 7px; }
+.studio-dialog .enrollment-file input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; opacity: 0; }
+.studio-dialog .enrollment-file input::file-selector-button { cursor: pointer; }
+.enrollment-file span { min-width: 0; font-size: 13px; }
+.enrollment-file span:first-of-type { flex: none; color: var(--ink); background: #292f31; padding: 5px 12px; border: 1px solid #4c5252; border-radius: 4px; }
+.enrollment-file span:last-child { overflow: hidden; padding-right: 8px; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.enrollment-file:has(:focus-visible) { outline: 3px solid var(--dialog-accent); outline-offset: 2px; }
+.enrollment-file:has([aria-invalid="true"]) { border-color: var(--dialog-error); }
+#enrollment-requirement { margin-top: 16px; font-size: 12px; }
+.enrollment-availability { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 8px 12px; border-radius: 7px; border: 1px solid #68553d; background: var(--dialog-highlight); font-size: 13px; margin-bottom: 16px; }
+.enrollment-availability .text-button { min-height: 32px; margin-left: auto; }
+.consent-summary { display: flex; align-items: baseline; gap: 7px; min-width: 0; background: var(--paper); padding: 8px 10px; border-radius: 7px; margin: 12px 0 15px; color: var(--muted); font-size: 12px; }
+.consent-summary span { flex: none; }
+.consent-summary code { color: var(--ink); overflow-wrap: anywhere; }
+#enrollment-result h3 { margin: 12px 0 2px; font-size: 21px; }
+#enrollment-result label { margin-top: 18px; }
+.result-symbol { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; color: var(--dialog-accent); background: var(--dialog-highlight); border: 1px solid #796242; font-size: 24px; }
+.studio-dialog .result-id input { font: 13px/1.5 "IBM Plex Mono", ui-monospace, monospace; }
+@media(max-width: 560px) {
+  .studio-dialog { width: calc(100% - 20px); max-height: calc(100dvh - 20px); border-radius: 15px; }
+  .studio-dialog .dialog-head, .studio-dialog .dialog-foot { padding: 13px 18px; }
+  .studio-dialog .dialog-body { padding: 17px 18px; }
+  .studio-dialog .dialog-head h2 { font-size: 19px; }
+  .studio-dialog input:not([type="file"]):not([type="radio"]), .studio-dialog select { font-size: 16px; }
+  .studio-dialog button { min-height: 40px; }
+}

@@ -5,7 +5,6 @@ import TTSCore
 struct DesignVoiceSheet: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openWindow) private var openWindow
 
     @State private var name = ""
     @State private var prompt = ""
@@ -30,7 +29,8 @@ struct DesignVoiceSheet: View {
                         .foregroundStyle(.red)
                     if model.errorNeedsDownloadCenter {
                         Button("去下载") {
-                            openWindow(id: "model-downloads")
+                            dismiss()
+                            model.present(.downloads)
                         }
                         .controlSize(.small)
                     }
@@ -62,13 +62,14 @@ struct DesignVoiceSheet: View {
                 Button("关闭") { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Button("保存并使用") { save() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(StudioPrimaryButton())
                     .disabled(!canSave)
             }
             .padding(.top, 16)
         }
         .padding(20)
         .frame(width: 460)
+        .studioWindow()
     }
 
     private var canSave: Bool {

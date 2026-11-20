@@ -4,6 +4,7 @@ import TTSEngineMLX
 /// 工具栏弹出的模型管理面板：状态、占用、删除。
 struct ModelInfoPopover: View {
     let manager: MLXModelManager
+    let access: DeviceAccess
     @State private var confirmingDelete = false
 
     var body: some View {
@@ -40,7 +41,7 @@ struct ModelInfoPopover: View {
                         Spacer()
                         Button("取消") { confirmingDelete = false }
                         Button("删除", role: .destructive) {
-                            manager.deleteModel()
+                            access.perform { manager.deleteModel() }
                             confirmingDelete = false
                         }
                     }
@@ -55,6 +56,7 @@ struct ModelInfoPopover: View {
         }
         .padding(16)
         .frame(width: 320)
+        .studioWindow()
     }
 
     @ViewBuilder

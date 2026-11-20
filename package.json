@@ -1,0 +1,11 @@
+{
+  "name": "voice-studio",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env.local web/server.mjs",
+    "setup-code": "node --env-file-if-exists=.env.local scripts/setup-code.mjs",
+    "test": "node --test web/test/*.test.mjs"
+  }
+}

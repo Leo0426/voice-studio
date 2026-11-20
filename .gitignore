@@ -6,3 +6,8 @@ dist/
 *.wav
 *.profraw
 assets/icon/AppIcon.iconset/
+
+.env
+.env.*
+!.env.example
+node_modules/

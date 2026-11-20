@@ -24,7 +24,7 @@ struct WaveformView: View {
                 )
                 let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
                 let played = (Double(index) + 0.5) / Double(Self.barCount) <= progress
-                context.fill(path, with: .color(played ? .accentColor : .primary.opacity(0.16)))
+                context.fill(path, with: .color(played ? Studio.gold : (samples.isEmpty ? Studio.line : Studio.gold.opacity(0.42))))
             }
         }
         .accessibilityLabel("播放进度")

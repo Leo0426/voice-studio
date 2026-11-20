@@ -1,6 +1,6 @@
-# qwen3-tts-client
+# Voice Studio
 
-macOS 原生 Qwen3-TTS 本地推理客户端。SwiftUI + SPM，macOS 14+，仅 Apple Silicon。
+文字与语音互转工具，默认使用本地模型，并提供可选的 OpenAI 引擎。原生客户端使用 SwiftUI + SPM，支持 Apple Silicon 和 macOS 14+。仓库根目录运行 `npm start` 启动网页版，`npm test` 验证转换接口（Node.js 22.13+）。
 
 ## 构建与测试
 
@@ -52,3 +52,14 @@ Release notes 放 `docs/release-notes/<tag>.md`，workflow 自动取用。
 
 - UI 开发和测试一律用 `FakeInferenceEngine`，不依赖真实模型。
 - 文档、注释、commit message 用中文。
+
+## Agent skills
+
+### Issue tracker
+Issues 以本地 markdown 文件跟踪，存放在 `.scratch/<feature>/` 下，不自动发布到 GitHub Issues。见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+六个状态 label 使用 ForgeFlow 默认名称（needs-triage / needs-info / ready-for-agent / ready-for-human / wontfix / resolved）。见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+单一上下文：根目录 `CONTEXT.md` + `docs/adr/`。见 `docs/agents/domain.md`。

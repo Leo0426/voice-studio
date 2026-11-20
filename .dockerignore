@@ -1,0 +1,13 @@
+**
+!package.json
+!scripts/
+!scripts/setup-code.mjs
+!web/
+!web/backend/
+!web/backend/**
+!web/public/
+!web/public/**
+!web/server.mjs
+!deploy/
+!deploy/nas/
+!deploy/nas/Dockerfile

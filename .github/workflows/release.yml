@@ -37,6 +37,11 @@ jobs:
           key: spm-release-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
           restore-keys: spm-release-${{ runner.os }}-
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          architecture: arm64
+
       - name: 构建并打包
         run: scripts/package-app.sh
 
@@ -47,9 +52,9 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           NOTES="docs/release-notes/${TAG}.md"
           if [[ -f "$NOTES" ]]; then
-            gh release create "$TAG" dist/Qwen3TTS-*.zip dist/Qwen3TTS-*.zip.sha256 \
+            gh release create "$TAG" dist/VoiceStudio-*.zip dist/VoiceStudio-*.zip.sha256 \
               --title "$TAG" --notes-file "$NOTES"
           else
-            gh release create "$TAG" dist/Qwen3TTS-*.zip dist/Qwen3TTS-*.zip.sha256 \
+            gh release create "$TAG" dist/VoiceStudio-*.zip dist/VoiceStudio-*.zip.sha256 \
               --title "$TAG" --generate-notes
           fi

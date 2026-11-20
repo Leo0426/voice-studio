@@ -1,0 +1,61 @@
+.history-bar, .history-bar nav, .history-heading, .task-actions, .history-delete-dialog > div {display:flex;align-items:center}
+.history-bar {min-height:68px;justify-content:space-between;gap:16px}
+.history-bar nav {gap:22px}
+.history-bar nav a {font-size:14px;text-decoration:none}
+.history-main {max-width:1040px;padding-block:clamp(32px,6vw,76px) 60px}
+.history-heading {display:block;margin-bottom:24px}
+.history-heading h1 {font-size:clamp(34px,4.4vw,52px)}
+.history-heading p {margin-top:8px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.task-history .secondary, .history-delete-dialog button {min-height:37px;padding:6px 13px;white-space:nowrap}
+[data-part="history-status"], [data-part="delete-error"], .task-feedback {font-size:13px;overflow-wrap:anywhere}
+[data-part="history-status"] {color:var(--muted)}
+[data-part="history-status"]:not(:empty), [data-part="history-retry"]:not([hidden]) {margin-bottom:12px}
+[data-part="history-status"].error, [data-part="delete-error"], .task-feedback.error {color:#ffb7a8}
+.history-empty {padding:clamp(34px,6vw,64px) 20px;text-align:center;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.history-empty p {margin:8px 0;color:var(--muted);font-size:14px}
+.history-empty a {display:inline-block;margin-top:8px}
+.task-list {margin:0;padding:0;list-style:none;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow:hidden}
+.task-list:empty {display:none}
+.task-row {padding:18px clamp(14px,2.4vw,26px);display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px 23px}
+.task-row + .task-row {border-top:1px solid var(--line)}
+.task-name {font-weight:600;font-size:16px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+.task-meta {display:flex;align-items:baseline;gap:3px 12px;flex-wrap:wrap;margin-top:4px;font-size:12px;color:var(--muted)}
+.task-meta time {font-variant-numeric:tabular-nums}
+.task-state {align-self:start;margin-block:2px;color:var(--muted);font-size:13px;white-space:nowrap}
+.task-state.completed {color:#a8d3b5}
+.task-state.failed {color:#ffb7a8}
+.task-actions {justify-self:end;flex-wrap:wrap;gap:8px}
+.task-actions button {font-size:13px}
+.task-actions .task-delete {color:var(--muted);background:transparent;border:0;padding:5px 3px;min-height:36px}
+.task-delete:hover {color:#ffb7a8}
+.task-feedback, .task-preview {grid-column:1/-1;min-width:0}
+.task-feedback {color:var(--muted)}
+.task-preview audio {display:block;width:min(100%,560px);max-height:42px}
+.history-pagination {display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px}
+.history-pagination span {color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.history-panel-head {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.history-main .history-panel-head {justify-content:flex-end}
+.module-history {margin-block:22px 0;padding:clamp(16px,2.4vw,25px);border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.module-history .history-panel-head h2 {font-size:18px}
+.module-history .task-list, .module-history .history-empty {background:var(--well)}
+.module-history .history-empty {padding:20px}
+.module-history .task-row {padding-block:12px}
+.history-delete-dialog {width:min(420px,calc(100vw - 32px));padding:24px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius)}
+.history-delete-dialog::backdrop {background:#050606aa}
+.history-delete-dialog p {margin-block:12px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.history-delete-dialog [data-part="delete-error"] {color:#ffb7a8}
+.history-delete-dialog > div {margin-top:20px;justify-content:flex-end;gap:9px}
+.history-delete-dialog [data-part="delete-confirm"] {background:#f3b0a0;color:#261711}
+@media (max-width:710px) {
+  .task-row {grid-template-columns:minmax(0,1fr) auto;gap:10px 8px}
+  .task-actions {grid-column:1/-1;justify-self:start}
+}
+@media (max-width:470px) {
+  .history-bar {min-height:58px}
+  .history-bar .brand {font-size:19px;gap:7px}
+  .history-bar nav {gap:12px}
+  .history-bar nav a {font-size:13px}
+  .history-main {padding-top:28px}
+  .history-heading {margin-bottom:17px}
+}
+.task-feedback:empty {display:none}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101315">
+  <title>任务历史 · Voice Studio</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/history.css">
+  <script type="module" src="/history.js"></script>
+</head>
+<body class="session-pending">
+  <div id="session-screen"><p role="status" id="session-status">正在检查登录状态…</p><button type="button" id="session-retry" class="secondary" hidden>重试</button><noscript>请启用 JavaScript 以查看任务历史。</noscript></div>
+  <a class="skip" href="#main">跳至任务历史</a>
+  <header class="top">
+    <div class="shell history-bar">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>Voice Studio</a>
+      <nav aria-label="工作台"><a href="/">返回工作台</a><a id="history-account" href="/account.html?returnTo=%2Fhistory.html">账号中心</a></nav>
+    </div>
+  </header>
+  <main class="shell history-main" id="main" tabindex="-1">
+    <div class="history-heading"><h1>任务历史</h1><p id="history-owner"></p></div>
+    <div id="history-panel" class="task-history"></div>
+  </main>
+</body>
+</html>

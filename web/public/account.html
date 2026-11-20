@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101315">
+  <title>账号中心 · Voice Studio</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/account.css">
+  <script type="module" src="/account.js"></script>
+</head>
+<body class="account-page">
+  <header class="top"><div class="shell account-bar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>Voice Studio</a>
+    <div class="account-actions" id="signed-actions" hidden><a id="back-workspace" href="/">返回工作台</a><button type="button" id="logout" class="secondary">退出登录</button></div>
+  </div></header>
+  <main class="shell account-main">
+    <div id="account-loading" class="account-loading"><p id="loading-text" role="status">正在检查登录状态…</p><button type="button" id="reload-account" class="secondary" hidden>重试</button></div>
+    <section class="account-login" id="signed-out" aria-labelledby="sign-title" hidden>
+      <h1 id="sign-title">登录 Voice Studio</h1><p id="sign-intro"></p>
+      <form id="sign-form">
+        <label>用户名<input id="sign-name" name="username" autocomplete="username" maxlength="128" required></label>
+        <label>密码<input id="sign-password" name="password" type="password" autocomplete="current-password" maxlength="256" required></label>
+        <div id="bootstrap-fields" hidden>
+          <label>确认密码<input id="confirm-password" type="password" autocomplete="new-password" maxlength="256"></label>
+          <label>本机设置码<input id="setup-code" type="password" autocomplete="off" spellcheck="false"></label>
+          <p class="form-help">在 Mac 应用窗口中点「复制首次设置码」，然后粘贴到此处。也可以在运行服务的电脑上执行 <code>npm run setup-code</code> 获取设置码。</p>
+        </div>
+        <p class="account-status" id="sign-status" role="status"></p>
+        <button type="submit" class="primary" id="sign-submit">登录</button>
+      </form>
+    </section>
+    <section id="signed-in" class="account-center" hidden>
+      <header class="account-heading"><div><h1>账号中心</h1><p id="profile-name"></p></div></header>
+      <nav class="account-tabs" id="account-tabs" aria-label="账号中心">
+        <a href="#profile">我的账号</a><a href="/history.html">任务历史</a><a href="#users" hidden>用户管理</a><a href="#roles" hidden>角色权限</a><a href="#openai-key" hidden>OpenAI 密钥</a><a href="#audit" hidden>审计记录</a>
+      </nav>
+      <p class="account-status" id="account-status" role="status"></p>
+      <section class="account-panel" id="panel-profile">
+        <h2>我的角色</h2><div class="role-tags" id="my-roles"></div>
+        <details class="my-access"><summary>查看已授予的权限</summary><ul id="my-permissions"></ul></details>
+        <div id="profile-tools" class="profile-tools" hidden>
+          <a id="profile-voice" href="/?engine=openai#voice-create" hidden>创建自定义声音</a>
+        </div>
+        <h2 class="divider-title">修改密码</h2>
+        <form id="password-form" class="password-form">
+          <label>当前密码<input id="current-password" type="password" autocomplete="current-password" maxlength="256" required></label>
+          <label>新密码<input id="new-password" type="password" autocomplete="new-password" minlength="8" maxlength="256" required><small>8 至 128 个字符。</small></label>
+          <label>确认新密码<input id="repeat-password" type="password" autocomplete="new-password" minlength="8" maxlength="256" required></label>
+          <p class="form-help">保存后，所有已登录设备都需要重新登录。</p>
+          <p class="account-status" id="password-status" role="status"></p><button type="submit" class="primary">保存新密码</button>
+        </form>
+      </section>
+      <section class="account-panel" id="panel-users" hidden>
+        <div class="panel-heading"><h2>用户管理</h2><button type="button" class="primary" id="add-user">创建用户</button></div>
+        <div class="admin-table" id="users-list"></div>
+      </section>
+      <section class="account-panel" id="panel-roles" hidden>
+        <div class="panel-heading"><h2>角色权限</h2><button type="button" class="primary" id="add-role">创建角色</button></div>
+        <div class="admin-table" id="roles-list"></div>
+      </section>
+      <section class="account-panel" id="panel-openai-key" aria-labelledby="openai-key-title" hidden>
+        <h2 id="openai-key-title">OpenAI API Key</h2>
+        <p class="account-status" id="key-source" role="status"></p>
+        <form class="password-form" id="key-form" autocomplete="off" hidden>
+          <label>新 API Key<input id="key-input" type="password" maxlength="4096" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="粘贴已有的 OpenAI API Key" required></label>
+          <p class="form-help">密钥存储在服务端，授权账号共用此配置。</p>
+          <button id="key-save" type="submit" class="primary">保存密钥</button>
+        </form>
+        <p class="account-status" id="key-status" role="status"></p>
+      </section>
+      <section class="account-panel" id="panel-audit" hidden>
+        <div class="panel-heading"><h2>审计记录</h2><button type="button" class="secondary" id="refresh-audit">刷新记录</button></div>
+        <div class="admin-table" id="audit-list"></div>
+      </section>
+    </section>
+  </main>
+  <dialog id="edit-dialog" aria-labelledby="edit-title">
+    <form id="edit-form" autocomplete="off">
+      <h2 id="edit-title"></h2><div id="edit-fields"></div>
+      <p id="edit-status" class="account-status" role="status"></p>
+      <div class="account-actions"><button id="edit-cancel" type="button" class="secondary">取消</button><button id="edit-submit" class="primary" type="submit">保存</button></div>
+    </form>
+  </dialog>
+  <noscript>请启用 JavaScript 以登录。</noscript>
+</body></html>
