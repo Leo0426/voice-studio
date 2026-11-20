@@ -196,7 +196,8 @@ function renderSTT() {
   el('stt-provider').disabled = busy;
   el('audio-language').disabled = busy;
   const recording = capturePhase === 'recording';
-  el('record').disabled = !recording && (!ready || busy || !validOptions);
+  el('record').disabled = !recording && (!window.isSecureContext || !ready || busy || !validOptions);
+  el('http-recording-hint').hidden = window.isSecureContext;
   el('record').querySelector('i').classList.toggle('live', recording);
   el('record').querySelector('span').textContent = recording ? '结束录音并转写' : '使用麦克风录音';
   el('cancel-record').hidden = !capture;

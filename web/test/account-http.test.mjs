@@ -35,6 +35,22 @@ async function listen(t, options) {
 const owner = { username: 'owner', password: 'local-owner-test' };
 const member = { username: 'speaker', password: 'local-user-test' };
 
+test('private IP deployment accepts the direct HTTP address and preserves same-origin sessions', async t => {
+  assert.throws(() => createWorkspaceServer({ database: ':memory:', origin: 'http://203.0.113.10:14003' }), /VOICE_STUDIO_ORIGIN/);
+  const origin = 'http://192.168.4.2:14003';
+  const http = await listen(t, { database: ':memory:', setupCode: 'test', origin });
+  const host = { Host: new URL(origin).host };
+  const input = { ...owner, setupCode: 'test' };
+  assert.equal((await http('/api/auth/bootstrap', 'POST', input, null, { ...host, Origin: 'http://192.168.4.2:14443' })).status, 403);
+  const response = await http('/api/auth/bootstrap', 'POST', input, null, { ...host, Origin: origin });
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
+  assert.doesNotMatch(response.headers.get('set-cookie'), /; Secure/);
+  const session = await sessionHeaders(response);
+  const current = await http('/api/auth/session', 'GET', undefined, session, host);
+  assert.equal((await current.json()).user.username, owner.username);
+});
+
 test('NAS requires its HTTPS origin and only built-in administrators can inspect or write credentials', async t => {
   const origin = 'https://voice.example.test:14443';
   const browser = { Host: new URL(origin).host, Origin: origin };

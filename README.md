@@ -114,14 +114,13 @@ npm start
 
 ### 部署到 NAS
 
-在 NAS 上使用 `deploy/nas/compose.yaml` 启动 Node.js 服务和 HTTPS 反向代理。NAS 提供 OpenAI 转换。本机 Qwen 和 Whisper 继续通过运行模型的 Mac 提供。令以下变量指向 NAS 的实际配置。
+在 NAS 上使用 `deploy/nas/compose.yaml` 启动 Node.js 服务。NAS 提供 OpenAI 转换。本机 Qwen 和 Whisper 继续通过运行模型的 Mac 提供。
 
-- `VOICE_STUDIO_HOST` 为能解析到 NAS 内网地址、且在 TLS 证书中有效的主机名。
-- `VOICE_STUDIO_BIND_IP` 为 NAS 内网地址，`VOICE_STUDIO_PORT` 默认为 `14443`。
-- `VOICE_STUDIO_TLS_DIR` 为包含 `fullchain.pem` 和 `privkey.pem` 的证书目录。代理以只读方式挂载该目录，证书更新后重启代理。
+- `VOICE_STUDIO_BIND_IP` 为 NAS 的内网 IPv4 地址，`VOICE_STUDIO_PORT` 默认使用 `14003`。
+- `VOICE_STUDIO_ORIGIN` 为浏览器实际访问地址，例如 `http://192.168.4.2:14003`。内网 HTTP 的账号与密钥传输为明文，浏览器转写可上传文件。使用 HTTPS 反向代理可加密传输并启用麦克风录音，配置时将绑定地址设为 `127.0.0.1`，并填写反向代理的 HTTPS 源地址。
 - `VOICE_STUDIO_DATA` 为账号、任务历史和密钥的持久化目录，确保 UID `1000` 可写。更新和回退时使用同一目录。
 
-在仓库根目录执行以下命令。首次使用时通过第二条命令获取一次性设置码，在 HTTPS 页面创建管理员，再从账号中心配置密钥。
+在仓库根目录启动 Compose。首次使用时获取一次性设置码，创建管理员，再从账号中心配置密钥。
 
 ```sh
 docker compose -f deploy/nas/compose.yaml up -d --build --wait
