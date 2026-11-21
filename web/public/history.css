@@ -21,7 +21,7 @@
 .task-name {font-weight:600;font-size:16px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
 .task-meta {display:flex;align-items:baseline;gap:3px 12px;flex-wrap:wrap;margin-top:4px;font-size:12px;color:var(--muted)}
 .task-meta time {font-variant-numeric:tabular-nums}
-.task-state {align-self:start;margin-block:2px;color:var(--muted);font-size:13px;white-space:nowrap}
+.task-state {color:var(--muted);font-size:13px;white-space:nowrap}
 .task-state.completed {color:#a8d3b5}
 .task-state.failed {color:#ffb7a8}
 .task-actions {justify-self:end;flex-wrap:wrap;gap:8px}
@@ -48,6 +48,7 @@
 .history-delete-dialog [data-part="delete-confirm"] {background:#f3b0a0;color:#261711}
 @media (max-width:710px) {
   .task-row {grid-template-columns:minmax(0,1fr) auto;gap:10px 8px}
+  .task-state {align-self:start;margin-block:2px}
   .task-actions {grid-column:1/-1;justify-self:start}
 }
 @media (max-width:470px) {
