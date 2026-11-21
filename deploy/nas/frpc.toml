@@ -1,0 +1,14 @@
+serverAddr = "{{ .Envs.FRP_SERVER_ADDR }}"
+serverPort = {{ .Envs.FRP_SERVER_PORT }}
+transport.tls.enable = true
+
+auth.method = "token"
+auth.tokenSource.type = "file"
+auth.tokenSource.file.path = "/etc/voice-studio/frp-token"
+
+[[proxies]]
+name = "voice-studio"
+type = "tcp"
+localIP = "app"
+localPort = 4317
+remotePort = {{ .Envs.FRP_REMOTE_PORT }}

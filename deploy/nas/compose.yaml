@@ -7,16 +7,35 @@ services:
     restart: unless-stopped
     environment:
       PORT: "4317"
-      VOICE_STUDIO_ORIGIN: ${VOICE_STUDIO_ORIGIN:?Set the browser-facing origin}
+      VOICE_STUDIO_ORIGIN: ${VOICE_STUDIO_ORIGIN:?Set the browser-facing HTTPS origin}
       VOICE_STUDIO_AUTH_DB: /data/access.sqlite
       VOICE_STUDIO_OPENAI_CONFIG: /data/openai.env
     volumes:
       - ${VOICE_STUDIO_DATA:?}:/data
-    ports:
-      - "${VOICE_STUDIO_BIND_IP:?}:${VOICE_STUDIO_PORT:-14003}:4317"
     healthcheck:
       test: ["CMD", "node", "-e", "require('node:http').get('http://127.0.0.1:4317/api/health',{headers:{Host:new URL(process.env.VOICE_STUDIO_ORIGIN).host}},r=>{r.resume();if(r.statusCode!==200)process.exitCode=1}).on('error',()=>{process.exitCode=1})"]
       interval: 15s
       timeout: 3s
       retries: 4
+    security_opt: [no-new-privileges:true]
+
+  frpc:
+    image: fatedier/frpc:v0.67.0
+    command: ["-c", "/etc/voice-studio/frpc.toml"]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      FRP_SERVER_ADDR: ${FRP_SERVER_ADDR:?Set the frps address}
+      FRP_SERVER_PORT: ${FRP_SERVER_PORT:-7000}
+      FRP_REMOTE_PORT: ${FRP_REMOTE_PORT:-14003}
+    volumes:
+      - ./frpc.toml:/etc/voice-studio/frpc.toml:ro
+      - type: bind
+        source: ${FRP_TOKEN_FILE:?Set the path to the frp token file}
+        target: /etc/voice-studio/frp-token
+        read_only: true
+        bind:
+          create_host_path: false
     security_opt: [no-new-privileges:true]

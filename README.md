@@ -114,16 +114,29 @@ npm start
 
 ### 部署到 NAS
 
-在 NAS 上使用 `deploy/nas/compose.yaml` 启动 Node.js 服务。NAS 提供 OpenAI 转换。本机 Qwen 和 Whisper 继续通过运行模型的 Mac 提供。
+在 NAS 上使用 `deploy/nas/compose.yaml` 启动服务。应用通过 Docker 网络向 frpc 提供 HTTP，frpc 通过 TLS 连接云端 frps。浏览器通过云端 Caddy 的 HTTPS 域名访问。NAS 提供 OpenAI 转换，本机 Qwen 和 Whisper 继续通过运行模型的 Mac 提供。
 
-- `VOICE_STUDIO_BIND_IP` 为 NAS 的内网 IPv4 地址，`VOICE_STUDIO_PORT` 默认使用 `14003`。
-- `VOICE_STUDIO_ORIGIN` 为浏览器实际访问地址，例如 `http://192.168.4.2:14003`。内网 HTTP 的账号与密钥传输为明文，浏览器转写可上传文件。使用 HTTPS 反向代理可加密传输并启用麦克风录音，配置时将绑定地址设为 `127.0.0.1`，并填写反向代理的 HTTPS 源地址。
+- `VOICE_STUDIO_ORIGIN` 为浏览器实际访问的 HTTPS 源地址，例如 `https://voice-studio.example.com`。
 - `VOICE_STUDIO_DATA` 为账号、任务历史和密钥的持久化目录，确保 UID `1000` 可写。更新和回退时使用同一目录。
+- `FRP_SERVER_ADDR` 和 `FRP_SERVER_PORT` 指向云端 frps，默认端口为 `7000`。`FRP_REMOTE_PORT` 是云端提供给 Caddy 的端口，默认为 `14003`。`FRP_TOKEN_FILE` 指向 NAS 上已有的 frp 令牌文件。
 
-在仓库根目录启动 Compose。首次使用时获取一次性设置码，创建管理员，再从账号中心配置密钥。
+将域名解析到 Caddy 所在的云服务器。云端 frps 设置 `proxyBindAddr = "127.0.0.1"`，让转发端口只供云端 Caddy 使用。Caddy 为域名提供 HTTPS，并将请求转发到对应的 frp 端口。
+
+```caddyfile
+voice-studio.example.com {
+    reverse_proxy 127.0.0.1:14003
+}
+```
+
+在仓库根目录启动 Compose，再通过 HTTPS 域名访问。由其他入口迁移时，使用原账号在新域名重新登录。
 
 ```sh
 docker compose -f deploy/nas/compose.yaml up -d --build --wait
+```
+
+全新安装使用以下命令获取一次性设置码，在 HTTPS 页面创建首个管理员，再到账号中心配置密钥。
+
+```sh
 docker compose -f deploy/nas/compose.yaml exec -T app npm run setup-code
 ```
 

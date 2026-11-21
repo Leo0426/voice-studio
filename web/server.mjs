@@ -2,7 +2,6 @@ import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { rmSync } from 'node:fs';
-import { isIPv4 } from 'node:net';
 import { extname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createSpeechBridge } from './backend/speech.mjs';
@@ -130,19 +129,12 @@ const operations = new Map(Object.entries({
   '/api/openai/voice-consents': 'voices.manage',
 }));
 
-function privateIPv4(address) {
-  if (!isIPv4(address)) return false;
-  const [first, second] = address.split('.').map(Number);
-  return first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
-}
-
 export function createWorkspaceServer({ speech = createSpeechBridge(), openai = createOpenAISpeech(),
   database = accountDatabase(), access, setupCode,
   desktop = process.env.VOICE_STUDIO_DESKTOP_CHILD === '1', origin = process.env.VOICE_STUDIO_ORIGIN } = {}) {
   const deployed = origin ? new URL(origin) : null;
-  const lanHTTP = deployed?.protocol === 'http:' && privateIPv4(deployed.hostname);
-  if (deployed && ((!lanHTTP && deployed.protocol !== 'https:') || deployed.origin !== origin || desktop)) {
-    throw new Error('VOICE_STUDIO_ORIGIN 必须是 NAS 的内网 HTTP 地址或 HTTPS 源地址。');
+  if (deployed && (deployed.protocol !== 'https:' || deployed.origin !== origin || desktop)) {
+    throw new Error('VOICE_STUDIO_ORIGIN 必须是 NAS 的 HTTPS 源地址。');
   }
   access ??= createAccessStore({ filename: database });
   if (!setupCode && database === ':memory:') setupCode = randomBytes(16).toString('hex');
@@ -165,9 +157,6 @@ export function createWorkspaceServer({ speech = createSpeechBridge(), openai = 
     try {
       const port = req.socket.localPort;
       const host = req.headers.host;
-      if (lanHTTP && req.socket.remoteAddress !== '127.0.0.1' && !privateIPv4(req.socket.remoteAddress)) {
-        fail(403, '内网入口仅允许内网访问。');
-      }
       if (deployed ? host !== deployed.host : !['127.0.0.1:' + port, 'localhost:' + port].includes(host)) {
         fail(403, '请求使用了未配置的访问地址。');
       }
@@ -189,7 +178,7 @@ export function createWorkspaceServer({ speech = createSpeechBridge(), openai = 
           return;
         }
         if (path.startsWith('/api/auth/') || path.startsWith('/api/admin/')) {
-          const result = await accountRoute({ path, req, res, token, access, readObject, secure: deployed?.protocol === 'https:',
+          const result = await accountRoute({ path, req, res, token, access, readObject, secure: Boolean(deployed),
             setupCode: () => setupCode ?? localSetupCode(database),
             retireSetupCode: () => {
               // A committed bootstrap is final, even if the stale code file cannot be removed.
