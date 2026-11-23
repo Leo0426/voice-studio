@@ -9,7 +9,9 @@ struct WorkspaceView: View {
     var body: some View {
         workspace
             .frame(minWidth: 740, minHeight: 510)
-            .toolbar { workspaceToolbar }
+            .toolbar {
+                ToolbarItem(placement: .automatic) { workspaceToolbarButton }
+            }
             .alert("设备工作台", isPresented: showingDeviceNotice) {
                 Button("好") { account.deviceNotice = nil }
             } message: { Text(account.deviceNotice ?? "") }
@@ -43,16 +45,20 @@ struct WorkspaceView: View {
         }
     }
 
-    @ToolbarContentBuilder private var workspaceToolbar: some ToolbarContent {
+    @ViewBuilder private var workspaceToolbarButton: some View {
         if account.model != nil {
-            ToolbarItem { Button("返回工作台", systemImage: "chevron.backward") { account.leaveDevice() } }
+            Button {
+                account.leaveDevice()
+            } label: {
+                Label("返回工作台", systemImage: "chevron.backward")
+            }
         } else if account.session?.mayUseDevice == true {
-            ToolbarItem { Button("设备工作台") { Task { await account.enterDevice() } } }
+            Button("设备工作台") { Task { await account.enterDevice() } }
         } else if account.session?.needsSetup == true {
-            ToolbarItem {
-                Button(account.copiedCode ? "已复制首次设置码" : "复制首次设置码") {
-                    Task { await account.copySetupCode() }
-                }
+            Button {
+                Task { await account.copySetupCode() }
+            } label: {
+                Text(account.copiedCode ? "已复制首次设置码" : "复制首次设置码")
             }
         }
     }
