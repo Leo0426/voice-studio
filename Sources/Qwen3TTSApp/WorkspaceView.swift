@@ -7,6 +7,19 @@ struct WorkspaceView: View {
     let account: DesktopAccount
 
     var body: some View {
+        workspace
+            .frame(minWidth: 740, minHeight: 510)
+            .toolbar { workspaceToolbar }
+            .alert("设备工作台", isPresented: showingDeviceNotice) {
+                Button("好") { account.deviceNotice = nil }
+            } message: { Text(account.deviceNotice ?? "") }
+            .onChange(of: service.origin) { if service.origin == nil { account.reset() } }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                Task { await account.refresh() }
+            }
+    }
+
+    @ViewBuilder private var workspace: some View {
         Group {
             if let origin = service.origin {
                 ZStack {
@@ -28,27 +41,24 @@ struct WorkspaceView: View {
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(minWidth: 740, minHeight: 510)
-        .toolbar {
-            if account.model != nil {
-                ToolbarItem { Button("返回工作台", systemImage: "chevron.backward") { account.leaveDevice() } }
-            } else if account.session?.mayUseDevice == true {
-                ToolbarItem { Button("设备工作台") { Task { await account.enterDevice() } } }
-            } else if account.session?.needsSetup == true {
-                ToolbarItem {
-                    Button(account.copiedCode ? "已复制首次设置码" : "复制首次设置码") {
-                        Task { await account.copySetupCode() }
-                    }
+    }
+
+    @ToolbarContentBuilder private var workspaceToolbar: some ToolbarContent {
+        if account.model != nil {
+            ToolbarItem { Button("返回工作台", systemImage: "chevron.backward") { account.leaveDevice() } }
+        } else if account.session?.mayUseDevice == true {
+            ToolbarItem { Button("设备工作台") { Task { await account.enterDevice() } } }
+        } else if account.session?.needsSetup == true {
+            ToolbarItem {
+                Button(account.copiedCode ? "已复制首次设置码" : "复制首次设置码") {
+                    Task { await account.copySetupCode() }
                 }
             }
         }
-        .alert("设备工作台", isPresented: Binding(get: { account.deviceNotice != nil }, set: { if !$0 { account.deviceNotice = nil } })) {
-            Button("好") { account.deviceNotice = nil }
-        } message: { Text(account.deviceNotice ?? "") }
-        .onChange(of: service.origin) { if service.origin == nil { account.reset() } }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            Task { await account.refresh() }
-        }
+    }
+
+    private var showingDeviceNotice: Binding<Bool> {
+        Binding(get: { account.deviceNotice != nil }, set: { if !$0 { account.deviceNotice = nil } })
     }
 }
 
